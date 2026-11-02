@@ -1,0 +1,31 @@
+title: "RunPod Serverless Request & Auto-Scaling GPU Worker Flow"
+type: flow
+nodes:
+  - id: client
+    title: "1. Client"
+    desc: "Browser / SDK triggering requests"
+  - id: endpoint
+    title: "2. API Endpoint"
+    desc: "api.runpod.ai/v2/.../run"
+  - id: queue
+    title: "3. FIFO Queue"
+    desc: "Buffer (Holds 0-10+ queued jobs)"
+  - id: workers
+    title: "4. GPU Worker Pool"
+    desc: "Auto-scaled 1-9 GPUs (Ready / Run / Init / Idle)"
+  - id: monitor
+    title: "5. Realtime Telemetry"
+    desc: "Stacked Area Chart: Workers, Queue, Processing"
+edges:
+  - from: client
+    to: endpoint
+    label: "POST /run"
+  - from: endpoint
+    to: queue
+    label: "Enqueue"
+  - from: queue
+    to: workers
+    label: "Dispatch"
+  - from: workers
+    to: monitor
+    label: "Metrics"

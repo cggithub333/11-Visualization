@@ -1,0 +1,570 @@
+/* Precision Technical Architecture Console Design System
+ * Inspired by high-end studio instrumentation, audio engineering racks, and systems telemetry.
+ * Clean, disciplined dark theme with zero AI clichés.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@layer base {
+  *, ::before, ::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: #090b0e;
+  color: #e6edf3;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Monospace font utility */
+.font-mono {
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Hardware Instrument Chassis */
+.chassis-panel {
+  background-color: #0f1217;
+  border: 1px solid #1f2530;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.sub-panel {
+  background-color: #13171f;
+  border: 1px solid #202734;
+}
+
+/* Precision Hardware Nodes */
+.hardware-node {
+  background-color: #141821;
+  border: 1px solid #232b3b;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transition: border-color 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s;
+}
+
+.hardware-node:hover {
+  border-color: #354157;
+  background-color: #171c26;
+}
+
+/* Active Node States (Sharp Technical Highlights, Zero Blurry Neon) */
+.node-active {
+  border-color: #60a5fa !important;
+  background-color: #172133 !important;
+  box-shadow: 0 0 0 1px #60a5fa, 0 4px 12px rgba(96, 165, 250, 0.15) !important;
+}
+
+.node-active-emerald {
+  border-color: #34d399 !important;
+  background-color: #12241f !important;
+  box-shadow: 0 0 0 1px #34d399, 0 4px 12px rgba(52, 211, 153, 0.15) !important;
+}
+
+.node-active-cyan {
+  border-color: #38bdf8 !important;
+  background-color: #13222e !important;
+  box-shadow: 0 0 0 1px #38bdf8, 0 4px 12px rgba(56, 189, 248, 0.15) !important;
+}
+
+/* Tactile Push Buttons */
+.btn-tactile {
+  background-color: #181d26;
+  border: 1px solid #2a3344;
+  color: #d1d9e0;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.btn-tactile:hover {
+  background-color: #1e2430;
+  border-color: #3a475d;
+  color: #ffffff;
+}
+
+.btn-tactile:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+/* Primary Action Button (Deep Studio Blue, Zero Rainbow Gradients) */
+.btn-primary-action {
+  background-color: #1d283a;
+  border: 1px solid #3b82f6;
+  color: #93c5fd;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(147, 197, 253, 0.15);
+}
+
+.btn-primary-action:hover {
+  background-color: #24334a;
+  border-color: #60a5fa;
+  color: #bfdbfe;
+}
+
+.btn-primary-action:active {
+  transform: translateY(1px);
+  background-color: #182232;
+}
+
+/* Step Telemetry Status Banner */
+.telemetry-banner {
+  background-color: #10141b;
+  border: 1px solid #1f2735;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Digital Oscilloscope Screen */
+.oscilloscope-screen {
+  background-color: #0b0d12;
+  border: 1px solid #1c222e;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* RunPod Worker Cards */
+.worker-card {
+  width: 58px;
+  height: 68px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #232b3b;
+  background-color: #131720;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  user-select: none;
+}
+
+.worker-ready {
+  background-color: #0f1d19;
+  border-color: #234e40;
+  color: #34d399;
+}
+.worker-ready svg {
+  stroke: #34d399;
+}
+
+.worker-run {
+  background-color: #1c182c;
+  border-color: #5b3e8a;
+  color: #c084fc;
+}
+.worker-run svg {
+  stroke: #c084fc;
+}
+
+.worker-init {
+  background-color: #0e1e28;
+  border-color: #224c63;
+  color: #38bdf8;
+}
+.worker-init svg {
+  stroke: #38bdf8;
+  animation: spin-slow 2s linear infinite;
+}
+
+.worker-idle {
+  background-color: #11141a;
+  border-color: #1a202a;
+  color: #4b5563;
+  opacity: 0.6;
+}
+.worker-idle svg {
+  stroke: #4b5563;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Universal Layout Utilities */
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-center { justify-content: center; }
+.justify-between { justify-content: space-between; }
+.flex-wrap { flex-wrap: wrap; }
+.flex-1 { flex: 1 1 0%; }
+.relative { position: relative; }
+.absolute { position: absolute; }
+.inset-0 { top: 0; right: 0; bottom: 0; left: 0; }
+.hidden { display: none; }
+.block { display: block; }
+
+.w-full { width: 100%; }
+.h-full { height: 100%; }
+.min-h-screen { min-height: 100vh; }
+
+.p-4 { padding: 1rem; }
+.p-6 { padding: 1.5rem; }
+.p-8 { padding: 2rem; }
+.px-1 { padding-left: 0.25rem; padding-right: 0.25rem; }
+.py-0\.5 { padding-top: 0.125rem; padding-bottom: 0.125rem; }
+.px-3 { padding-left: 0.75rem; padding-right: 0.75rem; }
+.py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.py-1\.5 { padding-top: 0.375rem; padding-bottom: 0.375rem; }
+.px-4 { padding-left: 1rem; padding-right: 1rem; }
+.px-5 { padding-left: 1.25rem; padding-right: 1.25rem; }
+.py-2 { padding-top: 0.5rem; padding-bottom: 0.5rem; }
+.py-2\.5 { padding-top: 0.625rem; padding-bottom: 0.625rem; }
+.py-3 { padding-top: 0.75rem; padding-bottom: 0.75rem; }
+
+.gap-1 { gap: 0.25rem; }
+.gap-1\.5 { gap: 0.375rem; }
+.gap-2 { gap: 0.5rem; }
+.gap-2\.5 { gap: 0.625rem; }
+.gap-3 { gap: 0.75rem; }
+.gap-4 { gap: 1rem; }
+.gap-6 { gap: 1.5rem; }
+.gap-8 { gap: 2rem; }
+
+.rounded-md { border-radius: 0.375rem; }
+.rounded-lg { border-radius: 0.5rem; }
+.rounded-xl { border-radius: 0.75rem; }
+.rounded-2xl { border-radius: 1rem; }
+.rounded-full { border-radius: 9999px; }
+
+.border { border-width: 1px; }
+.border-t { border-top-width: 1px; }
+.border-b { border-bottom-width: 1px; }
+.border-r { border-right-width: 1px; }
+
+.text-left { text-align: left; }
+.text-center { text-align: center; }
+.text-xs { font-size: 0.75rem; line-height: 1rem; }
+.text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.text-base { font-size: 1rem; line-height: 1.5rem; }
+.text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.text-xl { font-size: 1.25rem; line-height: 1.75rem; }
+.text-2xl { font-size: 1.5rem; line-height: 2rem; }
+
+.font-normal { font-weight: 400; }
+.font-medium { font-weight: 500; }
+.font-semibold { font-weight: 600; }
+.font-bold { font-weight: 700; }
+
+.tracking-tight { letter-spacing: -0.02em; }
+.tracking-wide { letter-spacing: 0.025em; }
+
+.text-white { color: #ffffff; }
+.text-zinc-100 { color: #f0f3f6; }
+.text-zinc-200 { color: #d1d9e0; }
+.text-zinc-300 { color: #b1bac4; }
+.text-zinc-400 { color: #8b949e; }
+.text-zinc-500 { color: #656d76; }
+.text-blue-300 { color: #93c5fd; }
+.text-blue-400 { color: #60a5fa; }
+.text-emerald-300 { color: #6ee7b7; }
+.text-emerald-400 { color: #34d399; }
+.text-cyan-300 { color: #7dd3fc; }
+.text-cyan-400 { color: #38bdf8; }
+
+.pointer-events-none { pointer-events: none; }
+.overflow-hidden { overflow: hidden; }
+.select-none { user-select: none; }
+
+/* Draggable Nodes & Interactive Canvas Pan */
+.lexis-draggable-node {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  will-change: transform;
+  transition: border-color 0.12s ease;
+}
+
+.lexis-draggable-node:hover {
+  border-color: #3b82f6;
+}
+
+.lexis-draggable-node.is-dragging {
+  cursor: grabbing !important;
+  z-index: 50 !important;
+  border-color: #60a5fa !important;
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.7), 0 0 0 1px #60a5fa !important;
+  transition: none !important;
+  will-change: transform;
+}
+
+.canvas-pannable {
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.canvas-pannable.is-panning {
+  cursor: grabbing !important;
+}
+
+/* LLM Server Node Deep-Dive Pulse Indicator */
+#lexis-node-llm {
+  position: relative;
+}
+
+#lexis-node-llm::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 10px;
+  border: 1px dashed rgba(96, 165, 250, 0.45);
+  pointer-events: none;
+  animation: pulse-ring 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-ring {
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+/* VRAM Blocks Grid in Deep-Dive */
+.vram-block-cell {
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  transition: all 0.2s ease;
+  border: 1px solid #1c2536;
+  background-color: #11151f;
+  color: #4b5563;
+}
+
+.vram-block-cell.is-free {
+  background-color: #0e121a;
+  border-color: #1a2230;
+  color: #374151;
+}
+
+.vram-block-cell.is-active-r1 {
+  background-color: rgba(96, 165, 250, 0.25);
+  border-color: #60a5fa;
+  color: #93c5fd;
+  box-shadow: 0 0 8px rgba(96, 165, 250, 0.2);
+}
+
+.vram-block-cell.is-active-r2 {
+  background-color: rgba(52, 211, 153, 0.25);
+  border-color: #34d399;
+  color: #a7f3d0;
+  box-shadow: 0 0 8px rgba(52, 211, 153, 0.2);
+}
+
+.vram-block-cell.is-active-r3 {
+  background-color: rgba(192, 132, 252, 0.25);
+  border-color: #c084fc;
+  color: #e9d5ff;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.2);
+}
+
+.vram-block-cell.is-active-r4 {
+  background-color: rgba(56, 189, 248, 0.25);
+  border-color: #38bdf8;
+  color: #bae6fd;
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.2);
+}
+
+.vram-block-cell.is-active-r5 {
+  background-color: rgba(251, 191, 36, 0.25);
+  border-color: #fbbf24;
+  color: #fef08a;
+  box-shadow: 0 0 8px rgba(251, 191, 36, 0.2);
+}
+
+.vram-block-cell.is-active-r6 {
+  background-color: rgba(244, 63, 94, 0.25);
+  border-color: #f43f5e;
+  color: #fecdd3;
+  box-shadow: 0 0 8px rgba(244, 63, 94, 0.2);
+}
+
+.vram-block-cell.is-fragmented {
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(239, 68, 68, 0.15),
+    rgba(239, 68, 68, 0.15) 4px,
+    rgba(239, 68, 68, 0.25) 4px,
+    rgba(239, 68, 68, 0.25) 8px
+  );
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+}
+
+/* Appended LLM Under-The-Hood Branch */
+#lexis-branch-llm {
+  position: relative;
+  z-index: 25;
+}
+
+#lexis-branch-llm:not(.hidden) {
+  animation: branchFadeIn 0.15s ease-out forwards;
+}
+
+@keyframes branchFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.branch-connector-glow {
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.18), 0 0 50px rgba(59, 130, 246, 0.08);
+}
+
+/* 3-Zone Architecture Dynamic Cards & Token Stream */
+.engine-pool-card {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(33, 43, 61, 0.8);
+  border-left-width: 3px;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 11px;
+  transition: all 0.25s ease-out;
+  animation: poolCardSlideIn 0.25s ease-out;
+}
+
+@keyframes poolCardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.engine-pool-card.is-blocked {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.4);
+  border-left-color: #ef4444;
+}
+
+.engine-batch-card {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(41, 53, 76, 0.9);
+  border-left-width: 3px;
+  border-radius: 6px;
+  padding: 8px 10px;
+  transition: all 0.25s ease-out;
+  animation: batchCardEnter 0.25s ease-out;
+}
+
+@keyframes batchCardEnter {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.engine-progress-bar {
+  background: rgba(30, 41, 59, 0.7);
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.engine-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.12s linear;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.streamed-token {
+  display: inline-block;
+  opacity: 0;
+  animation: tokenFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  margin-right: 3px;
+}
+
+@keyframes tokenFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.streamed-token.is-boundary {
+  color: #34d399 !important;
+  font-weight: 600;
+  text-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+}
+
+/* Remove default scrollbar on the 3 LLM deep-dive boxes */
+#engine-pool-list,
+#engine-batch-list,
+#box-stream-tokens,
+.no-scrollbar {
+  scrollbar-width: none !important; /* Firefox */
+  -ms-overflow-style: none !important; /* IE & Edge */
+}
+
+#engine-pool-list::-webkit-scrollbar,
+#engine-batch-list::-webkit-scrollbar,
+#box-stream-tokens::-webkit-scrollbar,
+.no-scrollbar::-webkit-scrollbar {
+  display: none !important; /* Chrome, Safari, Opera */
+  width: 0 !important;
+  height: 0 !important;
+}
+
+/* Global sleek subtle scrollbars for dark theme */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+
+
