@@ -312,11 +312,46 @@
     }
   ];
 
+  const CONNECTIONS = [
+    // Ingress Tier 1 -> Tier 1 & Tier 2
+    ['web-client', 'apisix'],
+    ['iam', 'apisix'],
+    ['apisix', 'harness'],
+    ['web-client', 'harness'],
+
+    // Tier 2 Services to Storage Tier 3 (Postgres & Redis)
+    ['harness', 'redis'],
+    ['harness', 'postgres'],
+    ['session', 'postgres'],
+    ['class', 'postgres'],
+    ['curriculum', 'postgres'],
+    ['agent', 'redis'],
+    ['notification', 'postgres'],
+
+    // Tier 2 Services to Message Broker (RabbitMQ)
+    ['session', 'rabbitmq'],
+    ['class', 'rabbitmq'],
+    ['notification', 'rabbitmq'],
+
+    // Tier 2 Internal orchestration
+    ['harness', 'curriculum'],
+    ['harness', 'session'],
+    ['harness', 'agent'],
+
+    // External Storage & AI Servers to Harness
+    ['harness', 'ai-voice'],
+    ['cloudflare-r2', 'harness'],
+    ['laya', 'harness'],
+    ['vllm', 'harness']
+  ];
+
   class FullArchitectureSimulation {
     constructor(options = {}) {
       this.options = options;
       this.headless = Boolean(options.headless);
       this.scenarios = SCENARIOS;
+      this.connections = CONNECTIONS;
+      this.paths = CONNECTIONS.map(([from, to]) => ({ id: `path-${from}-${to}`, from, to }));
       this.state = {
         activeCaseId: 'case-1',
         stepIndex: 0,
@@ -328,9 +363,21 @@
       this.boundHandlers = {};
     }
 
+    generateSquaredPath(x1, y1, x2, y2, yMid) {
+      const mid = typeof yMid === 'number' ? yMid : (y1 + y2) / 2;
+      return `M ${x1} ${y1} L ${x1} ${mid} L ${x2} ${mid} L ${x2} ${y2}`;
+    }
+
     init() {
       if (this.headless || typeof document === 'undefined') {
         return this;
+      }
+      if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+        try {
+          lucide.createIcons();
+        } catch (e) {
+          // Safe fallback in test or constrained environments
+        }
       }
       this.bindDomEvents();
       this.drawConnectionPaths();
@@ -338,8 +385,28 @@
       return this;
     }
 
+    bindEvents() {
+      this.bindDomEvents();
+    }
+
     bindDomEvents() {
-      // Scenario buttons
+      // Unified Scenario dropdown selector
+      const caseSelect = document.getElementById('use-case-select');
+      if (caseSelect) {
+        caseSelect.addEventListener('change', (e) => {
+          this.setCase(e.target.value);
+        });
+      }
+
+      // Unified Play Scenario button
+      const playScenarioBtn = document.getElementById('btn-arch-play-scenario');
+      if (playScenarioBtn) {
+        playScenarioBtn.addEventListener('click', () => {
+          this.togglePlayScenario();
+        });
+      }
+
+      // Scenario buttons (backward compatibility)
       const caseBtns = document.querySelectorAll('.case-btn');
       caseBtns.forEach((btn) => {
         btn.addEventListener('click', (e) => {
@@ -348,15 +415,11 @@
         });
       });
 
-      // Controls
+      // Controls (backward compatibility)
       const playBtn = document.getElementById('btn-arch-play-pause');
       if (playBtn) {
         playBtn.addEventListener('click', () => {
-          if (this.state.isPlaying) {
-            this.pause();
-          } else {
-            this.play();
-          }
+          this.togglePlayScenario();
         });
       }
 
@@ -391,6 +454,12 @@
       this.state.r2Uploaded = false;
 
       if (!this.headless && typeof document !== 'undefined') {
+        // Sync unified dropdown selector
+        const caseSelect = document.getElementById('use-case-select');
+        if (caseSelect && caseSelect.value !== caseId) {
+          caseSelect.value = caseId;
+        }
+
         // Update button active state
         document.querySelectorAll('.case-btn').forEach((b) => {
           if (b.getAttribute('data-case') === caseId) {
@@ -434,6 +503,14 @@
       return currentCase.steps[this.state.stepIndex];
     }
 
+    togglePlayScenario() {
+      if (this.state.isPlaying) {
+        this.pause();
+      } else {
+        this.play();
+      }
+    }
+
     play() {
       this.state.isPlaying = true;
       this.updatePlayPauseIcons();
@@ -441,6 +518,9 @@
       this.state.timerId = setInterval(() => {
         this.stepNext();
       }, 2200);
+      if (this.state.timerId && typeof this.state.timerId.unref === 'function') {
+        this.state.timerId.unref();
+      }
     }
 
     pause() {
@@ -453,16 +533,41 @@
     }
 
     reset() {
+      this.pause();
       this.state.stepIndex = 0;
       this.state.audioChunksCount = 0;
       this.state.r2Uploaded = false;
       if (!this.headless && typeof document !== 'undefined') {
+        this.updatePlayPauseIcons();
         this.renderCurrentState();
       }
     }
 
     updatePlayPauseIcons() {
       if (this.headless || typeof document === 'undefined') return;
+
+      // Update #btn-arch-play-scenario UI state (text and .playing class)
+      const scenarioBtn = document.getElementById('btn-arch-play-scenario');
+      const labelPlay = document.getElementById('label-arch-play');
+      if (scenarioBtn) {
+        if (this.state.isPlaying) {
+          scenarioBtn.classList.add('playing');
+          if (labelPlay) {
+            labelPlay.textContent = '⏸ Pause';
+          } else {
+            scenarioBtn.textContent = '⏸ Pause';
+          }
+        } else {
+          scenarioBtn.classList.remove('playing');
+          if (labelPlay) {
+            labelPlay.textContent = '▶ Play Scenario';
+          } else {
+            scenarioBtn.textContent = '▶ Play Scenario';
+          }
+        }
+      }
+
+      // Legacy buttons support
       const playIcon = document.getElementById('icon-arch-play');
       const pauseIcon = document.getElementById('icon-arch-pause');
       if (playIcon && pauseIcon) {
@@ -553,23 +658,39 @@
 
       // Connections topology map
       const connections = [
+        // Ingress Tier 1 -> Tier 1 & Tier 2
         ['web-client', 'apisix'],
+        ['iam', 'apisix'],
         ['apisix', 'harness'],
+        ['web-client', 'harness'],
+
+        // Tier 2 Services to Storage Tier 3 (Postgres & Redis)
+        ['harness', 'redis'],
+        ['harness', 'postgres'],
+        ['session', 'postgres'],
+        ['class', 'postgres'],
+        ['curriculum', 'postgres'],
+        ['agent', 'redis'],
+        ['notification', 'postgres'],
+
+        // Tier 2 Services to Message Broker (RabbitMQ)
+        ['session', 'rabbitmq'],
+        ['class', 'rabbitmq'],
+        ['notification', 'rabbitmq'],
+
+        // Tier 2 Internal orchestration
         ['harness', 'curriculum'],
         ['harness', 'session'],
-        ['harness', 'redis'],
-        ['harness', 'ai-voice'],
-        ['harness', 'laya'],
-        ['harness', 'vllm'],
         ['harness', 'agent'],
-        ['harness', 'cloudflare-r2'],
-        ['session', 'postgres'],
-        ['session', 'rabbitmq'],
-        ['rabbitmq', 'class'],
-        ['rabbitmq', 'notification']
+
+        // External Storage & AI Servers to Harness
+        ['harness', 'ai-voice'],
+        ['cloudflare-r2', 'harness'],
+        ['laya', 'harness'],
+        ['vllm', 'harness']
       ];
 
-      connections.forEach(([srcId, tgtId]) => {
+      connections.forEach(([srcId, tgtId], index) => {
         const srcEl = document.getElementById(`node-${srcId}`);
         const tgtEl = document.getElementById(`node-${tgtId}`);
         if (!srcEl || !tgtEl) return;
@@ -577,24 +698,69 @@
         const srcRect = srcEl.getBoundingClientRect();
         const tgtRect = tgtEl.getBoundingClientRect();
 
-        const x1 = srcRect.left + srcRect.width / 2 - gridRect.left;
-        const y1 = srcRect.top + srcRect.height / 2 - gridRect.top;
-        const x2 = tgtRect.left + tgtRect.width / 2 - gridRect.left;
-        const y2 = tgtRect.top + tgtRect.height / 2 - gridRect.top;
+        const srcCenterX = Math.round(srcRect.left + srcRect.width / 2 - gridRect.left);
+        const tgtCenterX = Math.round(tgtRect.left + tgtRect.width / 2 - gridRect.left);
+
+        let x1 = srcCenterX;
+        let y1;
+        let x2 = tgtCenterX;
+        let y2;
+        let yMid;
+
+        // Clean channel routing offsets to prevent line overlap
+        const channelOffset = ((index % 7) - 3) * 4;
+
+        if (
+          (srcId === 'web-client' && tgtId === 'apisix') ||
+          (srcId === 'iam' && tgtId === 'apisix')
+        ) {
+          // Direct horizontal routing for Tier 1 adjacent nodes
+          if (srcId === 'web-client') {
+            x1 = Math.round(srcRect.right - gridRect.left);
+            y1 = Math.round(srcRect.top + srcRect.height / 2 - gridRect.top);
+            x2 = Math.round(tgtRect.left - gridRect.left);
+            y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gridRect.top);
+          } else {
+            x1 = Math.round(srcRect.left - gridRect.left);
+            y1 = Math.round(srcRect.top + srcRect.height / 2 - gridRect.top);
+            x2 = Math.round(tgtRect.right - gridRect.left);
+            y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gridRect.top);
+          }
+          yMid = y1;
+        } else if (Math.abs(srcRect.top - tgtRect.top) < 35) {
+          // Same tier routing (e.g. across Tier 2)
+          if (tgtId === 'rabbitmq' || srcId === 'rabbitmq') {
+            // Broker fan-out routes through channel below Tier 2
+            y1 = Math.round(srcRect.bottom - gridRect.top);
+            y2 = Math.round(tgtRect.bottom - gridRect.top);
+            yMid = Math.max(y1, y2) + 12 + channelOffset;
+          } else {
+            // Service-to-service routes through channel above Tier 2
+            y1 = Math.round(srcRect.top - gridRect.top);
+            y2 = Math.round(tgtRect.top - gridRect.top);
+            yMid = Math.min(y1, y2) - 12 + channelOffset;
+          }
+        } else if (srcRect.bottom <= tgtRect.top + 20) {
+          // Downward routing (Tier 1 -> Tier 2, Tier 2 -> Tier 3/4)
+          y1 = Math.round(srcRect.bottom - gridRect.top);
+          y2 = Math.round(tgtRect.top - gridRect.top);
+          const baseYMid = Math.round((y1 + y2) / 2);
+          yMid = baseYMid + channelOffset;
+        } else {
+          // Upward routing (Tier 3/4 -> Tier 2)
+          y1 = Math.round(srcRect.top - gridRect.top);
+          y2 = Math.round(tgtRect.bottom - gridRect.top);
+          const baseYMid = Math.round((y1 + y2) / 2);
+          yMid = baseYMid + channelOffset;
+        }
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('id', `path-${srcId}-${tgtId}`);
+        path.setAttribute('data-connection', `${srcId}-${tgtId}`);
+        path.setAttribute('data-id-alt', `path-${tgtId}-${srcId}`);
         path.setAttribute('class', 'arch-path');
 
-        // Smooth curve
-        const dx = x2 - x1;
-        const dy = y2 - y1;
-        const cx1 = x1 + dx * 0.1;
-        const cy1 = y1 + dy * 0.5;
-        const cx2 = x2 - dx * 0.1;
-        const cy2 = y2 - dy * 0.5;
-        const d = `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;
-
+        const d = this.generateSquaredPath(x1, y1, x2, y2, yMid);
         path.setAttribute('d', d);
         path.setAttribute('marker-end', 'url(#arrow)');
         svgGroup.appendChild(path);
@@ -608,10 +774,11 @@
         p.classList.remove('arch-path-active', 'arch-path-purple', 'arch-path-orange', 'arch-path-emerald');
       });
 
-      let path = document.getElementById(`path-${srcId}-${tgtId}`);
-      if (!path) {
-        path = document.getElementById(`path-${tgtId}-${srcId}`);
-      }
+      let path = document.getElementById(`path-${srcId}-${tgtId}`) ||
+                 document.getElementById(`path-${tgtId}-${srcId}`) ||
+                 document.querySelector(`[data-id-alt="path-${srcId}-${tgtId}"]`) ||
+                 document.querySelector(`[data-connection="${srcId}-${tgtId}"]`) ||
+                 document.querySelector(`[data-connection="${tgtId}-${srcId}"]`);
 
       if (path) {
         path.classList.add('arch-path-active');
@@ -634,6 +801,13 @@
     }
 
     activate() {
+      if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
+        try {
+          lucide.createIcons();
+        } catch (e) {
+          // Safe fallback
+        }
+      }
       this.resize();
       this.play();
     }

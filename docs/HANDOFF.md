@@ -39,8 +39,18 @@ Focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deplo
      - **Vibrant Semantic Glow States**: Modeled node highlight behavior after Diagram 2 (`adaptive-context-switch`), implementing scoped glow tokens in `src/diagrams/lexis-voice/styles.css` (`.node-active-emerald`, `.node-active-blue`, `.node-active-purple`, `.node-active-teal`, `.node-active-indigo`, `.node-active-cyan`) with `0 0 20px` drop shadows and `-1px` tactile hover lifts.
      - **Pipeline Pulse Coordination**: Updated `triggerSingleVoiceTurn` and `triggerStepHop` in `src/diagrams/lexis-voice/lexis-engine.js` so each packet hop triggers the matching component's semantic theme color (e.g. teal for curriculum, purple for session/decision, indigo for harness, blue for LLM, emerald for STT/client, cyan for TTS).
      - **Visual & Automated Verification**: Captured and inspected visual verification screenshot `templates/edit/verify/view2_lexis_voice_verified.png`. Confirmed all 40 unit and integration tests pass cleanly (`40/40`).
+   6. **Phase 6 — Diagram 3 Full Architecture Refinement & MVC Architecture Standards:**
+      - **Mandatory Architecture Design Rules**: Established `docs/rules/design.md` detailing the 5 core invariants: (1) 3-Subblock MVC stack per service card; (2) Zero-AI-slop & Lucide Icons standard (no emojis, no sparkle icon); (3) Squared / Orthogonal Manhattan Routing (`M x1 y1 L x1 y_mid L x2 y_mid L x2 y2`); (4) Standardized Enterprise Technical Terminology (`Decision Server`, `Message Broker`, `LLM Server`, `External IAM Service`, `External Storage Service`, `SQL Database`, `NoSQL Database`); (5) Unified Scenario Command Bar (1 dropdown + dedicated scenario play button).
+      - **Full Architecture Visualizer (Diagram 3)**: Implemented `src/diagrams/full-architecture/` (`styles.css`, `template.js`, `engine.js`), covering 100% of Tab 0 (`espp-microservice-architecture.drawio`).
+   7. **Phase 7 — SPP Plan Execution: MVC 3-Subblock Stack, Squared Manhattan Routing & Lexis Polish:**
+      - Executed 5-task tactical TDD plan (`plans/2026-11-06-diagram3-mvc-refinement/spp-plan.md`) orchestrated via Herdr subagents.
+      - Embedded 3-subblock MVC structure (`.mvc-controller`, `.mvc-service`, `.mvc-model`) across all microservices and web client.
+      - Implemented channel-aware squared Manhattan routing (`generateSquaredPath`) connecting all services to designated PostgreSQL SQL schemas and Redis/MongoDB NoSQL databases.
+      - Replaced horizontal buttons with unified `<select id="use-case-select">` and dedicated `<button id="btn-arch-play-scenario">` (`▶ Play Scenario` / `⏸ Pause`).
+      - Polished Lexis Voice Diagram: removed down arrow character, widened LLM Server card (`min-w-[200px] max-w-[260px]`), and embedded Lucide vector chevron dynamically rotating on branch expansion (`> ` to `v`).
+      - Expanded test suite to 54 passing tests repo-wide (`54/54` pass, 0 regressions).
 - **Remaining:**
-  - None — all requested changes (box enlargement, 4-column balanced grid, semantic glow highlights) are complete and verified.
+  - Continuous enhancement and live deployment monitoring.
 - **Urgency:** low (completed milestone handoff).
 
 ## Scope and guardrails
@@ -119,6 +129,7 @@ Focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deplo
 ## Source pointers
 - `index.html`
 - `README.md`
+- `docs/rules/design.md`
 - `docs/deployment.md`
 - `docs/HANDOFF.md`
 - `src/core/dom.js`

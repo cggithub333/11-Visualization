@@ -19,9 +19,21 @@ test('Full architecture stylesheet exists and defines 4-tier grid and telemetry 
   assert.ok(content.includes('.tier-services'), 'defines .tier-services');
   assert.ok(content.includes('.tier-storage'), 'defines .tier-storage');
   assert.ok(content.includes('.tier-ai'), 'defines .tier-ai');
+  assert.ok(content.includes('.mvc-card'), 'defines .mvc-card');
+  assert.ok(content.includes('.mvc-controller'), 'defines .mvc-controller');
+  assert.ok(content.includes('.mvc-service'), 'defines .mvc-service');
+  assert.ok(content.includes('.mvc-model'), 'defines .mvc-model');
+  assert.ok(content.includes('.use-case-select'), 'defines .use-case-select');
+  assert.ok(content.includes('.btn-play-scenario'), 'defines .btn-play-scenario');
 });
 
-test('FullArchTemplate exports HTML markup and mount helper', async () => {
+test('index.html embeds Lucide CDN and does not contain sparkles', () => {
+  const indexHtml = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.ok(indexHtml.includes('unpkg.com/lucide'), 'index.html must embed Lucide CDN');
+  assert.ok(!indexHtml.includes('sparkle'), 'must not contain sparkle icon');
+});
+
+test('FullArchTemplate exports 3-subblock MVC structure with zero emoji and clean technical names', async () => {
   const mod = await import('../src/diagrams/full-architecture/template.js');
   assert.ok(mod.FullArchTemplate, 'exports FullArchTemplate');
   assert.equal(typeof mod.FullArchTemplate.render, 'function', 'has render function');
@@ -50,8 +62,29 @@ test('FullArchTemplate exports HTML markup and mount helper', async () => {
   assert.ok(container.innerHTML.includes('data-node="ai-voice"'), 'has ai-voice node');
   assert.ok(container.innerHTML.includes('data-node="laya"'), 'has laya node');
   assert.ok(container.innerHTML.includes('data-node="vllm"'), 'has vllm node');
-  assert.ok(container.innerHTML.includes('class="case-selector"'), 'has case selector toolbar');
   assert.ok(container.innerHTML.includes('id="full-arch-svg"'), 'has SVG connection overlay');
+
+  // Check Dropdown and Play Button
+  assert.ok(container.innerHTML.includes('id="use-case-select"'), 'has use-case-select dropdown');
+  assert.ok(container.innerHTML.includes('id="btn-arch-play-scenario"'), 'has btn-arch-play-scenario button');
+
+  // Check Clean Technical Names
+  assert.ok(container.innerHTML.includes('Decision Server'), 'has Decision Server (not Service Laya)');
+  assert.ok(container.innerHTML.includes('Message Broker'), 'has Message Broker (not RabbitMQ Broker)');
+  assert.ok(container.innerHTML.includes('LLM Server'), 'has LLM Server (not vLLM)');
+  assert.ok(container.innerHTML.includes('External IAM Service'), 'has External IAM Service');
+  assert.ok(container.innerHTML.includes('External Storage Service'), 'has External Storage Service');
+  assert.ok(container.innerHTML.includes('SQL Database'), 'has SQL Database');
+  assert.ok(container.innerHTML.includes('NoSQL Database'), 'has NoSQL Database');
+
+  // Check 3-Subblock MVC
+  assert.ok(container.innerHTML.includes('class="mvc-controller"'), 'has mvc-controller subblock');
+  assert.ok(container.innerHTML.includes('class="mvc-service"'), 'has mvc-service subblock');
+  assert.ok(container.innerHTML.includes('class="mvc-model"'), 'has mvc-model subblock');
+
+  // Check Zero Emoji
+  const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
+  assert.ok(!emojiRegex.test(container.innerHTML), 'must have zero emoji');
 });
 
 test('FullArchitectureSimulation exports class and orchestrates 5 scenarios', async () => {
@@ -102,6 +135,19 @@ test('FullArchitectureSimulation exports class and orchestrates 5 scenarios', as
   assert.ok(nextRes, 'stepNext returns step details');
 });
 
+test('FullArchitectureSimulation draws squared orthogonal paths and controls dropdown playback', async () => {
+  const mod = await import('../src/diagrams/full-architecture/engine.js');
+  const Cls = mod.FullArchitectureSimulation || mod.default?.FullArchitectureSimulation;
+  const sim = new Cls({ headless: true });
+
+  assert.equal(typeof sim.setCase, 'function');
+  assert.equal(typeof sim.togglePlayScenario, 'function');
+
+  // Verify squared routing generator
+  const pathData = sim.generateSquaredPath(100, 200, 400, 500, 350);
+  assert.ok(pathData.includes('M 100 200 L 100 350 L 400 350 L 400 500'), 'must follow orthogonal 90-degree squared path');
+});
+
 import DiagramRegistry from '../src/core/registry.js';
 import { execSync } from 'node:child_process';
 
@@ -125,10 +171,45 @@ test('Headless Chrome mounts and executes full-architecture diagram via URL rout
   });
 
   assert.ok(dump.includes('id="view-full-architecture"'), 'Chrome dump must include view-full-architecture');
+  assert.ok(dump.includes('id="use-case-select"'), 'Chrome dump must include use-case-select');
+  assert.ok(dump.includes('id="btn-arch-play-scenario"'), 'Chrome dump must include btn-arch-play-scenario');
   assert.ok(dump.includes('data-node="harness"'), 'Chrome dump must include harness node');
   assert.ok(dump.includes('data-node="cloudflare-r2"'), 'Chrome dump must include cloudflare-r2 node');
   assert.ok(dump.includes('data-node="rabbitmq"'), 'Chrome dump must include rabbitmq node');
+  assert.ok(dump.includes('data-node="postgres"'), 'Chrome dump must include postgres node');
+  assert.ok(dump.includes('data-node="redis"'), 'Chrome dump must include redis node');
   assert.ok(dump.includes('id="telemetry-panel"'), 'Chrome dump must include telemetry panel');
+});
+
+test('FullArchitectureSimulation registers all database and service connection paths', async () => {
+  const mod = await import('../src/diagrams/full-architecture/engine.js');
+  const Cls = mod.FullArchitectureSimulation || mod.default?.FullArchitectureSimulation;
+  const sim = new Cls({ headless: true });
+
+  const requiredPathIds = [
+    'path-web-client-apisix',
+    'path-apisix-harness',
+    'path-harness-postgres',
+    'path-harness-redis',
+    'path-session-postgres',
+    'path-session-rabbitmq',
+    'path-class-postgres',
+    'path-class-rabbitmq',
+    'path-curriculum-postgres',
+    'path-agent-redis',
+    'path-notification-postgres',
+    'path-notification-rabbitmq',
+    'path-iam-apisix',
+    'path-cloudflare-r2-harness',
+    'path-laya-harness',
+    'path-vllm-harness'
+  ];
+
+  requiredPathIds.forEach((id) => {
+    const p = sim.paths.find((item) => item.id === id);
+    assert.ok(p, `must register path ${id}`);
+    assert.ok(p.from && p.to, `path ${id} must have valid endpoints`);
+  });
 });
 
 test('Headless Chrome captures visual verification screenshot for Diagram 3 Full Architecture', () => {

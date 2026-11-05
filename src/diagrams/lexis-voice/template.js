@@ -217,15 +217,16 @@
 
             <!-- LLM Server (Column 3, Interactive Deep-Dive Trigger) -->
             <div class="flex justify-center">
-              <div id="lexis-node-llm" class="lexis-draggable-node hardware-node px-4 py-4 w-full max-w-[240px] text-center flex flex-col items-center justify-center gap-1 shadow-lg cursor-pointer relative group transition-all hover:border-blue-400" title="Click to unfold Under-The-Hood Architecture Branch">
+              <div id="lexis-node-llm" class="lexis-draggable-node hardware-node px-4 py-4 w-full min-w-[200px] max-w-[260px] text-center flex flex-col items-center justify-center gap-1 shadow-lg cursor-pointer relative group transition-all hover:border-blue-400" title="Click to unfold Under-The-Hood Architecture Branch">
                 <div class="flex items-center justify-center gap-1.5 mb-0.5">
                   <svg class="w-4 h-4 text-blue-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                   <span class="text-xs uppercase font-bold text-[#f0f3f6] tracking-wide whitespace-nowrap">LLM Server</span>
                   <span id="badge-node-llm-engine" class="px-1.5 py-0.2 bg-blue-500/20 border border-blue-400/40 rounded text-[9px] font-mono text-blue-300 font-semibold">vLLM</span>
                 </div>
                 <div class="text-[11px] text-zinc-200 font-mono font-medium">Continuous Batching</div>
-                <span class="text-[9px] text-blue-400 font-mono flex items-center justify-center gap-0.5 group-hover:text-blue-300 font-medium">
-                  <span class="inspect-badge-text">Inspect Engine</span>
+                <span class="text-[9px] text-blue-400 font-mono flex items-center justify-center gap-1 whitespace-nowrap group-hover:text-blue-300 font-medium">
+                  <span class="inspect-badge-text whitespace-nowrap">Inspect Engine</span>
+                  <svg class="w-3 h-3 inspect-chevron transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m9 18 6-6-6-6"/></svg>
                 </span>
               </div>
             </div>

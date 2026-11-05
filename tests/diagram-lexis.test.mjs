@@ -11,6 +11,9 @@ test('LexisTemplate exports HTML markup and mount helper', () => {
   assert.ok(LexisTemplate.LEXIS_HTML.includes('id="view-diagram-slot-2"'), 'must contain view-diagram-slot-2');
   assert.ok(LexisTemplate.LEXIS_HTML.includes('id="lexis-node-stt"'), 'must contain lexis-node-stt');
   assert.ok(LexisTemplate.LEXIS_HTML.includes('id="lexis-node-llm"'), 'must contain lexis-node-llm');
+  assert.ok(LexisTemplate.LEXIS_HTML.includes('inspect-chevron'), 'must contain inspect-chevron icon');
+  assert.ok(LexisTemplate.LEXIS_HTML.includes('inspect-badge-text'), 'must contain inspect-badge-text');
+  assert.ok(LexisTemplate.LEXIS_HTML.includes('max-w-[260px]'), 'must contain max-w-[260px]');
   assert.ok(LexisTemplate.LEXIS_HTML.includes('id="lexis-branch-llm"'), 'must contain lexis-branch-llm');
   assert.ok(LexisTemplate.LEXIS_HTML.includes('id="vram-blocks-grid"'), 'must contain vram-blocks-grid');
   assert.equal(typeof LexisTemplate.mount, 'function', 'mount must be a function');
