@@ -40,11 +40,15 @@ Each diagram lives in its own isolated folder under `src/diagrams/<diagram-id>/`
 │       │   ├── styles.css                        # Scoped worker card FSM styles
 │       │   ├── template.js                       # Self-mounting #view-runpod-serverless DOM template
 │       │   └── engine.js                         # ServerlessSimulation engine + registry manifest
-│       └── lexis-voice/                          # Diagram 2: Lexis Real-Time Voice Practice Architecture
-│           ├── styles.css                        # Scoped 5-tier draggable node & VRAM block styles
-│           ├── template.js                       # Self-mounting #view-diagram-slot-2 DOM template
-│           ├── llm-deep-dive.js                  # LLMEngineDeepDiveSimulation (vLLM vs Ollama branch)
-│           └── lexis-engine.js                   # LexisArchitectureSimulation + registry manifest
+│       ├── lexis-voice/                          # Diagram 2: Lexis Real-Time Voice Practice Architecture
+│       │   ├── styles.css                        # Scoped 5-tier draggable node & VRAM block styles
+│       │   ├── template.js                       # Self-mounting #view-diagram-slot-2 DOM template
+│       │   ├── llm-deep-dive.js                  # LLMEngineDeepDiveSimulation (vLLM vs Ollama branch)
+│       │   └── lexis-engine.js                   # LexisArchitectureSimulation + registry manifest
+│       └── adaptive-context-switch/              # Diagram 3: Adaptive Context Switching & Dynamic FSM
+│           ├── styles.css                        # Scoped FSM badges & prompt directive styles
+│           ├── template.js                       # Self-mounting #view-adaptive-context-switch DOM template
+│           └── context-engine.js                 # AdaptiveContextSwitchSimulation + FSM evaluator
 └── tests/                                        # Zero-dependency Node native test suite (node:test)
 ```
 
@@ -98,7 +102,7 @@ Because the repository is 100% static HTML/CSS/JS with zero build dependencies, 
 ## 🧪 Automated Tests & Headless Verification
 
 ```bash
-# 1. Run the 26-test zero-dependency Node.js unit & integration suite:
+# 1. Run the 36-test zero-dependency Node.js unit & integration suite:
 node --test tests/*.test.mjs
 
 # 2. Verify View 1 (RunPod Serverless):
@@ -106,4 +110,7 @@ google-chrome --headless=new --disable-gpu --window-size=1400,900 --screenshot="
 
 # 3. Verify View 2 (Lexis Voice Practice + vLLM Deep-Dive Branch):
 google-chrome --headless=new --disable-gpu --window-size=1400,1400 --screenshot="templates/edit/verify/view2_lexis_vllm.png" "file://$PWD/index.html?diagram=diagram-slot-2&branch=1&engine=vllm&mockreq=3&enginesteps=5"
+
+# 4. Verify View 3 (Adaptive Context Switching & Dynamic FSM):
+google-chrome --headless=new --disable-gpu --window-size=1400,1000 --screenshot="templates/edit/verify/view3_adaptive_context_verified.png" "file://$PWD/index.html?diagram=adaptive-context-switch&turn=good"
 ```

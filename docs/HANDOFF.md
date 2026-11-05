@@ -26,8 +26,14 @@ Focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deplo
      - Decommissioned the legacy `architecture.omnicrafts.uk` DNS `CNAME` record from the `omnicrafts.uk` zone.
      - Surgically cleaned `/etc/cloudflared/config.yml` (removed only the `architecture.omnicrafts.uk` `http://localhost:8888` ingress rule and deleted `/etc/cloudflared/config.yml.bak-20261105104502`), validated ingress rules (`OK`), and restarted `cloudflared.service` while keeping `vllm2.omnicrafts.uk` (`:8000`), `api.omnicrafts.uk` (`:9080`), `stt.omnicrafts.uk` (`:8091`), and `tts.omnicrafts.uk` (`:8092`) online with 4 active HTTP/2 tunnel connections.
      - Authored `docs/deployment.md` and `tests/deployment-docs.test.mjs` (`28/28` tests passing), committed (`3419fa3`), pushed to `origin/dev` and `origin/main`, and locked `gpg-agent` via `pass:lock`.
+  3. **Phase 3 — Diagram 3: Adaptive Context Switching & Dynamic FSM Pipeline:**
+     - Created modular diagram plugin `src/diagrams/adaptive-context-switch/` (`styles.css`, `template.js`, `context-engine.js`) and registered into `DiagramRegistry` (`id: 'adaptive-context-switch'`).
+     - Faithfully modeled 100% of `01-Service-Harness-Ts/src/domain/policy/adaptive-context-switching.policy.ts`: initial sub-context entity locking on Turn 1, good turns threshold (4-5), SIBLING_SUB_CONTEXT_CLUSTERS, 15-Template Bank bridge phrase interpolation, anti-deadlock rescue on >2 consecutive weak turns, off-topic redirect badge, and real-time prompt injection directive (< 45 tokens) strictly forbidding meta-headers.
+     - Integrated into `index.html` navigation dropdown and updated `tests/hub-integration.test.mjs`.
+     - Authored `tests/diagram-adaptive-context-switch.test.mjs`, expanding test suite from 28 to 36 tests (`36/36` passed, 0 regressions).
+     - Generated automated Headless Chrome screenshot verification (`templates/edit/verify/view3_adaptive_context_verified.png`, 114 KB).
 - **Remaining:**
-  - None — all requested refactoring, GitHub synchronization, Cloudflare Pages deployment, tunnel cleanup, and documentation tasks are complete.
+  - None — all requested refactoring, GitHub synchronization, Cloudflare Pages deployment, tunnel cleanup, and Diagram 3 implementation tasks are complete.
 - **Urgency:** low (completed milestone handoff).
 
 ## Scope and guardrails

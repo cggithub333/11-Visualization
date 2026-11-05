@@ -28,6 +28,7 @@ test('index.html is slimmed down to ~75 lines and contains modular links and scr
   assert.ok(indexHtml.includes('href="./src/core/chassis.css"'), 'must link chassis.css');
   assert.ok(indexHtml.includes('href="./src/diagrams/runpod-serverless/styles.css"'), 'must link runpod styles.css');
   assert.ok(indexHtml.includes('href="./src/diagrams/lexis-voice/styles.css"'), 'must link lexis styles.css');
+  assert.ok(indexHtml.includes('href="./src/diagrams/adaptive-context-switch/styles.css"'), 'must link adaptive-context-switch styles.css');
 
   // Assert modular scripts in dependency order
   assert.ok(indexHtml.includes('src="./src/tailwind.js"'), 'must load tailwind.js');
@@ -38,7 +39,10 @@ test('index.html is slimmed down to ~75 lines and contains modular links and scr
   assert.ok(indexHtml.includes('src="./src/diagrams/lexis-voice/template.js"'), 'must load lexis template.js');
   assert.ok(indexHtml.includes('src="./src/diagrams/lexis-voice/llm-deep-dive.js"'), 'must load llm-deep-dive.js');
   assert.ok(indexHtml.includes('src="./src/diagrams/lexis-voice/lexis-engine.js"'), 'must load lexis-engine.js');
+  assert.ok(indexHtml.includes('src="./src/diagrams/adaptive-context-switch/template.js"'), 'must load adaptive-context-switch template.js');
+  assert.ok(indexHtml.includes('src="./src/diagrams/adaptive-context-switch/context-engine.js"'), 'must load adaptive-context-switch context-engine.js');
   assert.ok(indexHtml.includes('src="./src/core/switcher.js"'), 'must load switcher.js');
+  assert.ok(indexHtml.includes('value="adaptive-context-switch"'), 'must contain option value adaptive-context-switch');
 });
 
 test('Switcher controller exposes switchDiagram, initDiagramSwitcher, bootstrapDiagrams', () => {
