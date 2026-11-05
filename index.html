@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="./src/diagrams/runpod-serverless/styles.css">
   <link rel="stylesheet" href="./src/diagrams/lexis-voice/styles.css">
   <link rel="stylesheet" href="./src/diagrams/adaptive-context-switch/styles.css">
+  <link rel="stylesheet" href="./src/diagrams/full-architecture/styles.css">
 </head>
 <body class="bg-[#090b0e] text-[#e6edf3] min-h-screen flex flex-col items-center justify-center p-3 sm:p-6 antialiased font-sans select-none">
 
@@ -30,6 +31,7 @@
             <option value="runpod-serverless" hidden class="hidden" style="display:none">RunPod: Serverless GPU &amp; Auto-Scaling</option>
             <option value="lexis-voice" selected>1. Lexis: Voice Practice Architecture</option>
             <option value="adaptive-context-switch">2. Adaptive Context Switching &amp; Dynamic FSM</option>
+            <option value="full-architecture">3. ESPP Full Microservices Architecture &amp; Cloud Storage</option>
           </select>
           <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-zinc-400">
             <svg class="w-4 h-4 fill-current" viewBox="0 0 20 20">
@@ -61,6 +63,10 @@
   <!-- Diagram 3: Adaptive Context Switching & Dynamic FSM Pipeline -->
   <script src="./src/diagrams/adaptive-context-switch/template.js"></script>
   <script src="./src/diagrams/adaptive-context-switch/context-engine.js"></script>
+
+  <!-- Diagram 4: ESPP Full Microservice Architecture & Cloud Storage -->
+  <script src="./src/diagrams/full-architecture/template.js"></script>
+  <script src="./src/diagrams/full-architecture/engine.js"></script>
 
   <!-- Core Lifecycle Switcher & URL Coordinator -->
   <script src="./src/core/switcher.js"></script>
