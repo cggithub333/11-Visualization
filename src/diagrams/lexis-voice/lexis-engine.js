@@ -454,7 +454,7 @@ class LexisArchitectureSimulation {
       laneOffset: laneOffset,
       speed: slowSpeed,
       onComplete: () => {
-        this.highlightNode('gateway', 'node-active', 250);
+        this.highlightNode('gateway', 'node-active-blue', 250);
 
         // Hop 2: Gateway -> Session Service (Routing to Voice Session)
         this.spawnParticle('gateway', 'session', {
@@ -466,7 +466,7 @@ class LexisArchitectureSimulation {
           laneOffset: laneOffset,
           speed: slowSpeed,
           onComplete: () => {
-            this.highlightNode('session', 'node-active', 250);
+            this.highlightNode('session', 'node-active-purple', 250);
 
             // Hop 3a: Session -> Curriculum Service (Query Syllabus & Rubrics)
             this.spawnParticle('session', 'curriculum', {
@@ -478,7 +478,7 @@ class LexisArchitectureSimulation {
               laneOffset: laneOffset * 0.5,
               speed: slowSpeed * 1.2,
               onComplete: () => {
-                this.highlightNode('curriculum', 'node-active', 250);
+                this.highlightNode('curriculum', 'node-active-teal', 250);
 
                 // Hop 3b: Curriculum -> Session Service (Inject Prompts & Constraints)
                 this.spawnParticle('curriculum', 'session', {
@@ -490,7 +490,7 @@ class LexisArchitectureSimulation {
                   laneOffset: laneOffset * 0.5,
                   speed: slowSpeed * 1.2,
                   onComplete: () => {
-                    this.highlightNode('session', 'node-active', 250);
+                    this.highlightNode('session', 'node-active-purple', 250);
 
                 // Hop 4: Session -> Harness (Crossing AI Tier Boundary via WebSocket Tunnel)
                 this.spawnParticle('session', 'harness', {
@@ -502,7 +502,7 @@ class LexisArchitectureSimulation {
                   laneOffset: laneOffset,
                   speed: slowSpeed * 0.95,
                   onComplete: () => {
-                    this.highlightNode('harness', 'node-active', 300);
+                    this.highlightNode('harness', 'node-active-indigo', 300);
 
                     // Hop 5: Harness -> STT Server
                     this.spawnParticle('harness', 'stt', {
@@ -527,7 +527,7 @@ class LexisArchitectureSimulation {
                             laneOffset: laneOffset,
                             speed: slowSpeed,
                             onComplete: () => {
-                              this.highlightNode('harness', 'node-active', 250);
+                              this.highlightNode('harness', 'node-active-indigo', 250);
 
                               // Hop 7: Harness -> Decision Server (Scaffolding / System 1)
                               this.spawnParticle('harness', 'decision', {
@@ -539,7 +539,7 @@ class LexisArchitectureSimulation {
                                 laneOffset: laneOffset,
                                 speed: slowSpeed,
                                 onComplete: () => {
-                                  this.highlightNode('decision', 'node-active', 300);
+                                  this.highlightNode('decision', 'node-active-purple', 300);
 
                                   // Hop 8: Decision -> LLM Server
                                   this.spawnParticle('decision', 'llm', {
@@ -551,11 +551,11 @@ class LexisArchitectureSimulation {
                                     laneOffset: laneOffset,
                                     speed: slowSpeed * 1.1,
                                     onComplete: () => {
-                                      this.highlightNode('llm', 'node-active', 350);
+                                      this.highlightNode('llm', 'node-active-blue', 350);
 
                                       // Hop 9: LLM -> Harness (Tokens streamed back to Harness Orchestrator)
                                       const forwardToHarness = () => {
-                                        this.highlightNode('llm', 'node-active', 250);
+                                        this.highlightNode('llm', 'node-active-blue', 250);
                                         this.spawnParticle('llm', 'harness', {
                                           color: '#60a5fa',
                                           glowColor: 'rgba(96, 165, 250, 0.5)',
@@ -565,7 +565,7 @@ class LexisArchitectureSimulation {
                                           laneOffset: laneOffset,
                                           speed: slowSpeed,
                                           onComplete: () => {
-                                            this.highlightNode('harness', 'node-active', 250);
+                                            this.highlightNode('harness', 'node-active-indigo', 250);
 
                                             // Hop 10: Harness -> TTS Server (Sentence-chunked Speech Synthesis)
                                             setTimeout(() => {
@@ -591,7 +591,7 @@ class LexisArchitectureSimulation {
                                                       laneOffset: laneOffset,
                                                       speed: slowSpeed,
                                                       onComplete: () => {
-                                                        this.highlightNode('harness', 'node-active', 250);
+                                                        this.highlightNode('harness', 'node-active-indigo', 250);
 
                                                         // Hop 12: Harness -> Session -> Gateway -> Client (Audio Egress)
                                                         this.spawnParticle('harness', 'session', {
@@ -603,14 +603,14 @@ class LexisArchitectureSimulation {
                                                           laneOffset: laneOffset,
                                                           speed: slowSpeed,
                                                           onComplete: () => {
-                                                            this.highlightNode('session', 'node-active', 200);
+                                                            this.highlightNode('session', 'node-active-purple', 200);
                                                             this.spawnParticle('session', 'gateway', {
                                                               color: '#06b6d4',
                                                               size: 5,
                                                               laneOffset: laneOffset,
                                                               speed: slowSpeed * 1.1,
                                                               onComplete: () => {
-                                                                this.highlightNode('gateway', 'node-active', 150);
+                                                                this.highlightNode('gateway', 'node-active-blue', 150);
                                                                 this.spawnParticle('gateway', 'client', {
                                                                   color: '#10b981',
                                                                   glowColor: 'rgba(16, 185, 129, 0.6)',
@@ -694,8 +694,20 @@ class LexisArchitectureSimulation {
     const step = this.stepDescriptions[this.activeStepIndex || 0];
     if (!step) return;
 
+    const nodeGlowMap = {
+      client: 'node-active-emerald',
+      gateway: 'node-active-blue',
+      session: 'node-active-purple',
+      curriculum: 'node-active-teal',
+      harness: 'node-active-indigo',
+      stt: 'node-active-emerald',
+      decision: 'node-active-purple',
+      llm: 'node-active-blue',
+      tts: 'node-active-cyan',
+    };
+
     this.updateStepBanner((this.activeStepIndex || 0) + 1, step.label);
-    this.highlightNode(step.from, 'node-active', 400);
+    this.highlightNode(step.from, nodeGlowMap[step.from] || 'node-active', 400);
     this.spawnParticle(step.from, step.to, {
       color: step.color,
       size: 6,
@@ -703,7 +715,7 @@ class LexisArchitectureSimulation {
       label: step.label.split(':')[0],
       showLabel: true,
       onComplete: () => {
-        this.highlightNode(step.to, 'node-active', 500);
+        this.highlightNode(step.to, nodeGlowMap[step.to] || 'node-active', 500);
       },
     });
 

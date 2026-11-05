@@ -1,11 +1,10 @@
 ---
 handoff-version: 1
-generated: 2026-11-06T01:03:45+07:00
+generated: 2026-11-06T04:40:00+07:00
 generator: james:handoff@2.0.0
-focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deployment (archify.omnicrafts.uk), and /etc/cloudflared cleanup"
+focus: "Modular diagram plugin architecture, Lexis Voice component box enlargement & semantic glow, Cloudflare Pages deployment (archify.omnicrafts.uk)"
 workspace: /home/brian/Projects/03-Main-Source/11-Visualization
 branch: dev
-head: 3419fa3809117fb2649b929033fb68bba6a4b078
 ---
 **Description:** Handoff metadata capturing workspace state, active branch, commit HEAD, and session focus for `11-Visualization`.
 
@@ -35,8 +34,13 @@ Focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deplo
      - **Diagram 3 Visual Topology & Routes**: Engineered orthogonal canvas connection rails and animated directional signal buses across all 6 hardware components (Student Station, API Gateway, Session State DB, Harness FSM Engine, vLLM Qwen 1.5B/7B AWQ, and Kokoro TTS) on `#context-flow-canvas`.
      - **Interactive Request Demo Flow**: Built full interactive controls in `template.js` and `context-engine.js`: "Send Turn Request" split button with batch sizes (1x, 3x, 5x), quality scenario triggers ("Simulate Good Turn 4/5", "Simulate Weak Turn Hold/Rescue", "Simulate Off-Topic Redirect"), Auto-Run live conversation mode, Pause/Resume, and Reset Session. Animated multi-hop signal packets with node glowing and live 6-step progress status banner.
      - **Test Suite Expansion**: Added `tests/diagram-url-persistence.test.mjs`, expanding test suite from 36 to 40 tests (`40/40` passing, 0 regressions). Captured and verified visual screenshot (`templates/edit/verify/view3_adaptive_context_verified.png`, 141 KB).
+  5. **Phase 5 — Lexis Voice Component Box Enlargement & Semantic Glow Animation:**
+     - **Component Box Enlargement & 4-Column Layout**: Resized all component boxes in Diagram 1 (`lexis-voice`) while preserving 100% of the 6-tier architecture. Student Station (`w-72`), API Gateway (`w-72`), Curriculum & Session Services (`w-64`), Harness Service (`w-72`), and Tier 5 Inference Workers (`STT`, `DECISION`, `LLM`, `TTS` across an evenly-spaced 4-column grid with `w-full max-w-[240px]`, identical heights, and `whitespace-nowrap` headers).
+     - **Vibrant Semantic Glow States**: Modeled node highlight behavior after Diagram 2 (`adaptive-context-switch`), implementing scoped glow tokens in `src/diagrams/lexis-voice/styles.css` (`.node-active-emerald`, `.node-active-blue`, `.node-active-purple`, `.node-active-teal`, `.node-active-indigo`, `.node-active-cyan`) with `0 0 20px` drop shadows and `-1px` tactile hover lifts.
+     - **Pipeline Pulse Coordination**: Updated `triggerSingleVoiceTurn` and `triggerStepHop` in `src/diagrams/lexis-voice/lexis-engine.js` so each packet hop triggers the matching component's semantic theme color (e.g. teal for curriculum, purple for session/decision, indigo for harness, blue for LLM, emerald for STT/client, cyan for TTS).
+     - **Visual & Automated Verification**: Captured and inspected visual verification screenshot `templates/edit/verify/view2_lexis_voice_verified.png`. Confirmed all 40 unit and integration tests pass cleanly (`40/40`).
 - **Remaining:**
-  - None — all requested changes (RunPod hiding, URL param persistence, Diagram 3 visual routes & request demo) are verified and complete.
+  - None — all requested changes (box enlargement, 4-column balanced grid, semantic glow highlights) are complete and verified.
 - **Urgency:** low (completed milestone handoff).
 
 ## Scope and guardrails
