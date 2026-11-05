@@ -225,7 +225,7 @@
                 </div>
                 <div class="text-[11px] text-zinc-200 font-mono font-medium">Continuous Batching</div>
                 <span class="text-[9px] text-blue-400 font-mono flex items-center justify-center gap-0.5 group-hover:text-blue-300 font-medium">
-                  <span class="inspect-badge-text">Inspect Engine &darr;</span>
+                  <span class="inspect-badge-text">Inspect Engine</span>
                 </span>
               </div>
             </div>

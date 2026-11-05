@@ -133,14 +133,14 @@ class LLMEngineDeepDiveSimulation {
       if (lexisNodeLlm) {
         lexisNodeLlm.classList.add('ring-2', 'ring-blue-500/60', 'border-blue-400');
         const badgeText = lexisNodeLlm.querySelector('.inspect-badge-text');
-        if (badgeText) badgeText.textContent = 'Branch Active ▲';
+        if (badgeText) badgeText.textContent = 'Branch Active';
       }
     } else {
       branchEl.classList.add('hidden');
       if (lexisNodeLlm) {
         lexisNodeLlm.classList.remove('ring-2', 'ring-blue-500/60', 'border-blue-400');
         const badgeText = lexisNodeLlm.querySelector('.inspect-badge-text');
-        if (badgeText) badgeText.textContent = 'Inspect Engine ↓';
+        if (badgeText) badgeText.textContent = 'Inspect Engine';
       }
     }
 
