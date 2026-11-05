@@ -358,9 +358,13 @@
         isPlaying: false,
         timerId: null,
         audioChunksCount: 0,
-        r2Uploaded: false
+        r2Uploaded: false,
+        is100View: false,
+        batchSize: 1,
+        isBatchRunning: false
       };
       this.boundHandlers = {};
+      this._activeMvcTimeouts = [];
     }
 
     generateSquaredPath(x1, y1, x2, y2, yMid) {
@@ -380,6 +384,14 @@
         }
       }
       this.bindDomEvents();
+      if (typeof window !== 'undefined' && window.location) {
+        try {
+          const params = new URLSearchParams(window.location.search);
+          if (params.get('zoom') === '100' || params.get('view') === '100') {
+            this.toggleZoom();
+          }
+        } catch (e) {}
+      }
       this.drawConnectionPaths();
       this.renderCurrentState();
       return this;
@@ -405,6 +417,48 @@
           this.togglePlayScenario();
         });
       }
+
+      // Zoom Toggle (100% Expanded View / Fit Screen)
+      const zoomBtn = document.getElementById('btn-arch-zoom');
+      if (zoomBtn) {
+        zoomBtn.addEventListener('click', () => {
+          this.toggleZoom();
+        });
+      }
+
+      // Send Request split button & batch dropdown
+      const sendReqBtn = document.getElementById('btn-arch-send-request');
+      if (sendReqBtn) {
+        sendReqBtn.addEventListener('click', () => {
+          this.sendRequest();
+        });
+      }
+
+      const toggleBatchBtn = document.getElementById('btn-arch-toggle-batch');
+      const dropdownBatch = document.getElementById('dropdown-arch-batch');
+      if (toggleBatchBtn && dropdownBatch) {
+        toggleBatchBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          dropdownBatch.classList.toggle('hidden');
+        });
+      }
+
+      const batchItems = document.querySelectorAll('.dropdown-batch-item');
+      batchItems.forEach((item) => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const count = parseInt(e.currentTarget.getAttribute('data-count'), 10) || 1;
+          this.setBatchSize(count);
+          if (dropdownBatch) dropdownBatch.classList.add('hidden');
+        });
+      });
+
+      this.boundHandlers.documentClick = (e) => {
+        if (dropdownBatch && !dropdownBatch.contains(e.target) && e.target !== toggleBatchBtn) {
+          dropdownBatch.classList.add('hidden');
+        }
+      };
+      document.addEventListener('click', this.boundHandlers.documentClick);
 
       // Scenario buttons (backward compatibility)
       const caseBtns = document.querySelectorAll('.case-btn');
@@ -438,6 +492,14 @@
           this.reset();
         });
       }
+
+      // Keydown listener (Escape exits 100% view)
+      this.boundHandlers.keydown = (e) => {
+        if (e.key === 'Escape' && this.state.is100View) {
+          this.toggleZoom();
+        }
+      };
+      document.addEventListener('keydown', this.boundHandlers.keydown);
 
       // Resize listener
       this.boundHandlers.resize = () => this.resize();
@@ -532,12 +594,315 @@
       }
     }
 
+    toggleZoom() {
+      this.state.is100View = !this.state.is100View;
+      if (!this.headless && typeof document !== 'undefined') {
+        const viewport = document.getElementById('view-full-architecture');
+        const zoomBtn = document.getElementById('btn-arch-zoom');
+        const zoomLabel = document.getElementById('label-arch-zoom');
+        if (viewport) {
+          viewport.classList.toggle('view-100', this.state.is100View);
+        }
+        if (zoomBtn) {
+          zoomBtn.classList.toggle('active', this.state.is100View);
+        }
+        if (zoomLabel) {
+          zoomLabel.textContent = this.state.is100View ? 'Fit Screen' : '100% View';
+        }
+        this.drawConnectionPaths();
+        this.renderCurrentState();
+        if (typeof requestAnimationFrame === 'function') {
+          requestAnimationFrame(() => this.drawConnectionPaths());
+        }
+      }
+      return this.state.is100View;
+    }
+
+    setBatchSize(count) {
+      this.state.batchSize = count;
+      if (!this.headless && typeof document !== 'undefined') {
+        const label = document.getElementById('label-arch-send-count');
+        if (label) {
+          label.textContent = count === 1 ? 'Send Request' : `Send ${count} Requests`;
+        }
+        document.querySelectorAll('.dropdown-batch-item').forEach((item) => {
+          const c = parseInt(item.getAttribute('data-count'), 10) || 1;
+          if (c === count) {
+            item.classList.add('active');
+          } else {
+            item.classList.remove('active');
+          }
+        });
+      }
+      return this.state.batchSize;
+    }
+
+    clearMvcAnimations() {
+      if (this._activeMvcTimeouts) {
+        this._activeMvcTimeouts.forEach((tid) => clearTimeout(tid));
+        this._activeMvcTimeouts = [];
+      }
+      if (!this.headless && typeof document !== 'undefined') {
+        document.querySelectorAll('.mvc-triad-stage').forEach((triad) => {
+          triad.classList.remove(
+            'mvc-phase-1',
+            'mvc-phase-2',
+            'mvc-phase-3',
+            'mvc-phase-4',
+            'mvc-phase-5',
+            'mvc-phase-6',
+            'triad-animating'
+          );
+        });
+        const packetsGroup = document.getElementById('svg-packets-group');
+        if (packetsGroup) {
+          packetsGroup.innerHTML = '';
+        }
+      }
+    }
+
+    animateServiceMvcCycle(nodeId, callback) {
+      if (this.headless || typeof document === 'undefined') {
+        if (typeof callback === 'function') callback();
+        return Promise.resolve();
+      }
+
+      return new Promise((resolve) => {
+        const nodeEl = document.getElementById(`node-${nodeId}`);
+        if (!nodeEl) {
+          if (typeof callback === 'function') callback();
+          resolve();
+          return;
+        }
+
+        const triad = nodeEl.querySelector('.mvc-triad-stage');
+        if (!triad) {
+          if (typeof callback === 'function') callback();
+          resolve();
+          return;
+        }
+
+        const phaseDur = 110;
+
+        const cleanup = () => {
+          triad.classList.remove(
+            'mvc-phase-1',
+            'mvc-phase-2',
+            'mvc-phase-3',
+            'mvc-phase-4',
+            'mvc-phase-5',
+            'mvc-phase-6'
+          );
+        };
+
+        cleanup();
+        // Phase 1: Controller (.mvc-subnode-controller) glows as inbound request arrives
+        triad.classList.add('mvc-phase-1');
+
+        const t1 = setTimeout(() => {
+          cleanup();
+          // Phase 2: Signal pulses across right bus to Model (.mvc-subnode-model), Model glows
+          triad.classList.add('mvc-phase-2');
+        }, phaseDur);
+
+        const t2 = setTimeout(() => {
+          cleanup();
+          // Phase 3: Signal pulses back across right bus to Controller, Controller glows
+          triad.classList.add('mvc-phase-3');
+        }, phaseDur * 2);
+
+        const t3 = setTimeout(() => {
+          cleanup();
+          // Phase 4: Signal pulses across left bus to View (.mvc-subnode-view), View glows
+          triad.classList.add('mvc-phase-4');
+        }, phaseDur * 3);
+
+        const t4 = setTimeout(() => {
+          cleanup();
+          // Phase 5: Signal pulses back across left bus to Controller, Controller glows
+          triad.classList.add('mvc-phase-5');
+        }, phaseDur * 4);
+
+        const t5 = setTimeout(() => {
+          cleanup();
+          // Phase 6: Controller emits external network line/packet to target service
+          triad.classList.add('mvc-phase-6');
+        }, phaseDur * 5);
+
+        const t6 = setTimeout(() => {
+          cleanup();
+          if (typeof callback === 'function') callback();
+          resolve();
+        }, phaseDur * 6 + 40);
+
+        this._activeMvcTimeouts = this._activeMvcTimeouts || [];
+        this._activeMvcTimeouts.push(t1, t2, t3, t4, t5, t6);
+      });
+    }
+
+    emitPacket(srcId, tgtId, colorClass) {
+      if (this.headless || typeof document === 'undefined') return;
+      const packetsGroup = document.getElementById('svg-packets-group');
+      const grid = document.getElementById('full-arch-grid');
+      if (!packetsGroup || !grid) return;
+
+      const srcEl = document.getElementById(`node-${srcId}`);
+      const tgtEl = document.getElementById(`node-${tgtId}`);
+      if (!srcEl || !tgtEl) return;
+
+      const gridRect = grid.getBoundingClientRect();
+      const srcRect = srcEl.getBoundingClientRect();
+      const tgtRect = tgtEl.getBoundingClientRect();
+
+      const x1 = Math.round(srcRect.left + srcRect.width / 2 - gridRect.left);
+      const y1 = Math.round(srcRect.top + srcRect.height / 2 - gridRect.top);
+      const x2 = Math.round(tgtRect.left + tgtRect.width / 2 - gridRect.left);
+      const y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gridRect.top);
+      const yMid = Math.round((y1 + y2) / 2);
+      const pathD = this.generateSquaredPath(x1, y1, x2, y2, yMid);
+
+      let packetClass = 'packet-dot';
+      let fillColor = '#38bdf8';
+      if (colorClass === 'node-active-purple') {
+        packetClass = 'packet-dot packet-dot-purple';
+        fillColor = '#c084fc';
+      } else if (colorClass === 'node-active-amber') {
+        packetClass = 'packet-dot packet-dot-orange';
+        fillColor = '#fb923c';
+      } else if (colorClass === 'node-active-emerald') {
+        packetClass = 'packet-dot packet-dot-emerald';
+        fillColor = '#34d399';
+      }
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('r', '5');
+      circle.setAttribute('class', packetClass);
+      circle.setAttribute('fill', fillColor);
+
+      const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+      anim.setAttribute('path', pathD);
+      anim.setAttribute('dur', '0.5s');
+      anim.setAttribute('repeatCount', '1');
+      anim.setAttribute('fill', 'freeze');
+      circle.appendChild(anim);
+
+      packetsGroup.appendChild(circle);
+
+      if (typeof anim.beginElement === 'function') {
+        try { anim.beginElement(); } catch (e) {}
+      }
+
+      setTimeout(() => {
+        try { circle.remove(); } catch (e) {}
+      }, 550);
+    }
+
+    async sendRequest(count) {
+      if (this.state.isBatchRunning) return;
+      const numRequests = typeof count === 'number' ? count : (this.state.batchSize || 1);
+      this.pause();
+
+      if (this.headless || typeof document === 'undefined') {
+        const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
+        this.state.stepIndex = Math.max(0, currentCase.steps.length - 1);
+        return;
+      }
+
+      this.state.isBatchRunning = true;
+
+      const sendBtn = document.getElementById('btn-arch-send-request');
+      const labelEl = document.getElementById('label-arch-send-count');
+      if (sendBtn) sendBtn.classList.add('sending');
+
+      const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
+      const totalSteps = currentCase.steps.length;
+
+      try {
+        for (let req = 1; req <= numRequests; req++) {
+          if (!this.state.isBatchRunning) break;
+          if (labelEl) {
+            labelEl.textContent = numRequests > 1 ? `Req ${req}/${numRequests}` : 'Processing...';
+          }
+
+          for (let sIdx = 0; sIdx < totalSteps; sIdx++) {
+            if (!this.state.isBatchRunning) break;
+            this.state.stepIndex = sIdx;
+            const step = currentCase.steps[sIdx];
+
+            // Update audio buffer / R2 state
+            if (this.state.activeCaseId === 'case-2') {
+              this.state.audioChunksCount = 14 + (sIdx * 2);
+            } else if (this.state.activeCaseId === 'case-4') {
+              if (sIdx >= 4) {
+                this.state.audioChunksCount = 0;
+                this.state.r2Uploaded = true;
+              } else {
+                this.state.audioChunksCount = 48;
+                this.state.r2Uploaded = false;
+              }
+            }
+
+            // Render telemetry & highlight nodes
+            this.renderCurrentState();
+
+            const highlightClass = this.state.activeCaseId === 'case-3'
+              ? 'node-active-purple'
+              : (this.state.activeCaseId === 'case-4' ? 'node-active-amber' : 'node-active-cyan');
+
+            // Internal MVC sequence: Controller -> Model -> Controller -> View -> Controller -> Next service
+            await this.animateServiceMvcCycle(step.source);
+            if (!this.state.isBatchRunning) break;
+
+            // Phase 6: Controller emits packet along SVG connection path to target service
+            this.emitPacket(step.source, step.target, highlightClass);
+
+            // Packet travels to target node
+            await new Promise((r) => setTimeout(r, 450));
+            if (!this.state.isBatchRunning) break;
+
+            const tgtNode = document.getElementById(`node-${step.target}`);
+            if (tgtNode) {
+              const tgtCtrl = tgtNode.querySelector('.mvc-subnode-controller');
+              if (tgtCtrl) {
+                tgtCtrl.style.transform = 'scale(1.25)';
+                tgtCtrl.style.boxShadow = '0 0 16px rgba(56, 189, 248, 0.9)';
+                setTimeout(() => {
+                  tgtCtrl.style.transform = '';
+                  tgtCtrl.style.boxShadow = '';
+                }, 250);
+              }
+            }
+
+            await new Promise((r) => setTimeout(r, 200));
+          }
+
+          if (req < numRequests && this.state.isBatchRunning) {
+            await new Promise((r) => setTimeout(r, 400));
+          }
+        }
+      } finally {
+        this.state.isBatchRunning = false;
+        if (sendBtn) sendBtn.classList.remove('sending');
+        if (labelEl) {
+          labelEl.textContent = this.state.batchSize === 1 ? 'Send Request' : `Send ${this.state.batchSize} Requests`;
+        }
+      }
+    }
+
     reset() {
       this.pause();
+      this.state.isBatchRunning = false;
+      this.clearMvcAnimations();
       this.state.stepIndex = 0;
       this.state.audioChunksCount = 0;
       this.state.r2Uploaded = false;
       if (!this.headless && typeof document !== 'undefined') {
+        const sendBtn = document.getElementById('btn-arch-send-request');
+        const labelEl = document.getElementById('label-arch-send-count');
+        if (sendBtn) sendBtn.classList.remove('sending');
+        if (labelEl) {
+          labelEl.textContent = this.state.batchSize === 1 ? 'Send Request' : `Send ${this.state.batchSize} Requests`;
+        }
         this.updatePlayPauseIcons();
         this.renderCurrentState();
       }
@@ -644,6 +1009,26 @@
 
       // 4. Highlight Connection Path
       this.highlightPath(step.source, step.target, highlightClass);
+
+      // 5. Trigger subtle pulse animations mediating through the controller
+      this.executeStep(step);
+    }
+
+    executeStep(step) {
+      if (this.headless || typeof document === 'undefined') return;
+      if (!step) {
+        const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
+        step = currentCase.steps[this.state.stepIndex];
+      }
+      if (!step) return;
+
+      const highlightClass = this.state.activeCaseId === 'case-3'
+        ? 'node-active-purple'
+        : (this.state.activeCaseId === 'case-4' ? 'node-active-amber' : 'node-active-cyan');
+
+      this.animateServiceMvcCycle(step.source, () => {
+        this.emitPacket(step.source, step.target, highlightClass);
+      });
     }
 
     drawConnectionPaths() {
@@ -762,7 +1147,7 @@
 
         const d = this.generateSquaredPath(x1, y1, x2, y2, yMid);
         path.setAttribute('d', d);
-        path.setAttribute('marker-end', 'url(#arrow)');
+        path.setAttribute('marker-end', 'url(#arrow-default)');
         svgGroup.appendChild(path);
       });
     }
@@ -772,6 +1157,7 @@
 
       document.querySelectorAll('.arch-path').forEach((p) => {
         p.classList.remove('arch-path-active', 'arch-path-purple', 'arch-path-orange', 'arch-path-emerald');
+        p.setAttribute('marker-end', 'url(#arrow-default)');
       });
 
       let path = document.getElementById(`path-${srcId}-${tgtId}`) ||
@@ -836,8 +1222,18 @@
 
     destroy() {
       this.pause();
-      if (!this.headless && typeof window !== 'undefined' && this.boundHandlers.resize) {
-        window.removeEventListener('resize', this.boundHandlers.resize);
+      this.state.isBatchRunning = false;
+      this.clearMvcAnimations();
+      if (!this.headless && typeof window !== 'undefined') {
+        if (this.boundHandlers.resize) {
+          window.removeEventListener('resize', this.boundHandlers.resize);
+        }
+        if (this.boundHandlers.documentClick) {
+          document.removeEventListener('click', this.boundHandlers.documentClick);
+        }
+        if (this.boundHandlers.keydown) {
+          document.removeEventListener('keydown', this.boundHandlers.keydown);
+        }
       }
     }
   }

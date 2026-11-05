@@ -23,8 +23,15 @@ test('Full architecture stylesheet exists and defines 4-tier grid and telemetry 
   assert.ok(content.includes('.mvc-controller'), 'defines .mvc-controller');
   assert.ok(content.includes('.mvc-service'), 'defines .mvc-service');
   assert.ok(content.includes('.mvc-model'), 'defines .mvc-model');
+  assert.ok(content.includes('.mvc-triad-stage'), 'defines .mvc-triad-stage');
+  assert.ok(content.includes('.mvc-phase-1'), 'defines .mvc-phase-1');
   assert.ok(content.includes('.use-case-select'), 'defines .use-case-select');
   assert.ok(content.includes('.btn-play-scenario'), 'defines .btn-play-scenario');
+  assert.ok(content.includes('.view-100'), 'defines .view-100');
+  assert.ok(content.includes('.btn-zoom'), 'defines .btn-zoom');
+  assert.ok(content.includes('.send-request-group'), 'defines .send-request-group');
+  assert.ok(content.includes('.btn-send-request'), 'defines .btn-send-request');
+  assert.ok(content.includes('.dropdown-arch-batch'), 'defines .dropdown-arch-batch');
 });
 
 test('index.html embeds Lucide CDN and does not contain sparkles', () => {
@@ -67,6 +74,10 @@ test('FullArchTemplate exports 3-subblock MVC structure with zero emoji and clea
   // Check Dropdown and Play Button
   assert.ok(container.innerHTML.includes('id="use-case-select"'), 'has use-case-select dropdown');
   assert.ok(container.innerHTML.includes('id="btn-arch-play-scenario"'), 'has btn-arch-play-scenario button');
+  assert.ok(container.innerHTML.includes('id="btn-arch-send-request"'), 'has btn-arch-send-request button');
+  assert.ok(container.innerHTML.includes('id="btn-arch-zoom"'), 'has btn-arch-zoom button');
+  assert.ok(container.innerHTML.includes('id="btn-arch-toggle-batch"'), 'has btn-arch-toggle-batch button');
+  assert.ok(container.innerHTML.includes('id="dropdown-arch-batch"'), 'has dropdown-arch-batch dropdown');
 
   // Check Clean Technical Names
   assert.ok(container.innerHTML.includes('Decision Server'), 'has Decision Server (not Service Laya)');
@@ -77,10 +88,16 @@ test('FullArchTemplate exports 3-subblock MVC structure with zero emoji and clea
   assert.ok(container.innerHTML.includes('SQL Database'), 'has SQL Database');
   assert.ok(container.innerHTML.includes('NoSQL Database'), 'has NoSQL Database');
 
-  // Check 3-Subblock MVC
-  assert.ok(container.innerHTML.includes('class="mvc-controller"'), 'has mvc-controller subblock');
-  assert.ok(container.innerHTML.includes('class="mvc-service"'), 'has mvc-service subblock');
-  assert.ok(container.innerHTML.includes('class="mvc-model"'), 'has mvc-model subblock');
+  // Check Icon-Only MVC Triad Stage
+  assert.ok(container.innerHTML.includes('mvc-triad-stage'), 'has mvc-triad-stage');
+  assert.ok(container.innerHTML.includes('mvc-controller'), 'has mvc-controller subblock');
+  assert.ok(container.innerHTML.includes('mvc-service'), 'has mvc-service subblock');
+  assert.ok(container.innerHTML.includes('mvc-model'), 'has mvc-model subblock');
+  assert.ok(container.innerHTML.includes('gamepad-directional'), 'has gamepad-directional for controller');
+  assert.ok(container.innerHTML.includes('eye-dashed'), 'has eye-dashed for view');
+  assert.ok(container.innerHTML.includes('book-bookmark'), 'has book-bookmark for model');
+  assert.ok(container.innerHTML.includes('mvc-bus-view-ctrl'), 'has bus between view and controller');
+  assert.ok(container.innerHTML.includes('mvc-bus-ctrl-model'), 'has bus between controller and model');
 
   // Check Zero Emoji
   const emojiRegex = /[\u{1F300}-\u{1F9FF}]/u;
@@ -97,6 +114,11 @@ test('FullArchitectureSimulation exports class and orchestrates 5 scenarios', as
   assert.equal(typeof sim.setCase, 'function');
   assert.equal(typeof sim.stepNext, 'function');
   assert.equal(typeof sim.reset, 'function');
+  assert.equal(typeof sim.executeStep, 'function');
+  assert.equal(typeof sim.animateServiceMvcCycle, 'function', 'has animateServiceMvcCycle method');
+  assert.equal(typeof sim.sendRequest, 'function', 'has sendRequest method');
+  assert.equal(typeof sim.toggleZoom, 'function', 'has toggleZoom method');
+  assert.equal(typeof sim.setBatchSize, 'function', 'has setBatchSize method');
 
   // Verify all 5 canonical scenarios
   assert.equal(sim.scenarios.length, 5, 'must define 5 scenario workflows');
@@ -133,6 +155,29 @@ test('FullArchitectureSimulation exports class and orchestrates 5 scenarios', as
   const nextRes = sim.stepNext();
   assert.equal(sim.state.stepIndex, 1);
   assert.ok(nextRes, 'stepNext returns step details');
+
+  // Test toggleZoom
+  assert.equal(sim.state.is100View, false);
+  const zoomRes = sim.toggleZoom();
+  assert.equal(zoomRes, true);
+  assert.equal(sim.state.is100View, true);
+  const zoomRes2 = sim.toggleZoom();
+  assert.equal(zoomRes2, false);
+  assert.equal(sim.state.is100View, false);
+
+  // Test setBatchSize
+  assert.equal(sim.state.batchSize, 1);
+  sim.setBatchSize(3);
+  assert.equal(sim.state.batchSize, 3);
+  sim.setBatchSize(5);
+  assert.equal(sim.state.batchSize, 5);
+
+  // Test animateServiceMvcCycle resolves in headless mode
+  await sim.animateServiceMvcCycle('harness');
+
+  // Test sendRequest completes in headless mode
+  await sim.sendRequest(1);
+  assert.equal(sim.state.isBatchRunning, false);
 });
 
 test('FullArchitectureSimulation draws squared orthogonal paths and controls dropdown playback', async () => {
@@ -173,6 +218,9 @@ test('Headless Chrome mounts and executes full-architecture diagram via URL rout
   assert.ok(dump.includes('id="view-full-architecture"'), 'Chrome dump must include view-full-architecture');
   assert.ok(dump.includes('id="use-case-select"'), 'Chrome dump must include use-case-select');
   assert.ok(dump.includes('id="btn-arch-play-scenario"'), 'Chrome dump must include btn-arch-play-scenario');
+  assert.ok(dump.includes('id="btn-arch-send-request"'), 'Chrome dump must include btn-arch-send-request');
+  assert.ok(dump.includes('id="btn-arch-zoom"'), 'Chrome dump must include btn-arch-zoom');
+  assert.ok(dump.includes('mvc-triad-stage'), 'Chrome dump must include mvc-triad-stage');
   assert.ok(dump.includes('data-node="harness"'), 'Chrome dump must include harness node');
   assert.ok(dump.includes('data-node="cloudflare-r2"'), 'Chrome dump must include cloudflare-r2 node');
   assert.ok(dump.includes('data-node="rabbitmq"'), 'Chrome dump must include rabbitmq node');

@@ -4,25 +4,24 @@ This document establishes the mandatory architectural and visual design standard
 
 ---
 
-## 1. Model-View-Controller (MVC) 3-Subblock Stack
+## 1. Model-View-Controller (MVC) Icon-Only Triad & Strict Mediator Bus
 
-Every microservice and subsystem card must explicitly present its internal architectural layers, mirroring clean architecture and hexagonal boundaries:
+Every microservice card presents its internal architectural layers through a clean, compact **MVC Interaction Stage** (`.mvc-triad-stage`), eliminating text clutter while strictly enforcing decoupled Hexagonal / MVC invariants:
 
-1. **Client Side Layering**:
-   - **View**: React UI components, Web Browser (Student, Mentor, Manager, Admin).
-   - **Controller**: Next.js action handlers, Axios HTTP fetch, WebSocket `/ws` audio streaming.
-   - **Model**: Zustand state store, Zod schema validation.
+1. **Subcomponents Represented by Lucide Icons Only**:
+   - **View (Left)**: Represented exclusively with `<i data-lucide="eye-dashed"></i>` (`lucide-eye-dashed`). Handles ingress presentation, client rendering, and UI reception.
+   - **Controller (Center)**: Represented exclusively with `<i data-lucide="gamepad-directional"></i>` (`lucide-gamepad-directional`). Serves as the central mediator hub and orchestration port.
+   - **Model (Right)**: Represented exclusively with `<i data-lucide="book-bookmark"></i>` (`lucide-book-bookmark`). Manages persistent state, entities, and database repository adapters.
 
-2. **Microservice 3-Subblock Stack**:
-   Each service card is partitioned into 3 distinct, vertically stacked subblocks with subtle 1px dividers:
-   - **Controller (Top)**: Ingress boundary, routing, protocol endpoints (`REST`, `WebSocket`, `gRPC`).
-   - **Service / Use Case (Middle)**: Core application workflows, session orchestrator, domain policies, adaptive context FSM.
-   - **Model / Repository (Bottom)**: Domain entities, state schemas, and database repository ports.
+2. **Strict Architectural Decoupling Invariant (Controller as Sole Mediator)**:
+   - **Model must NEVER know or directly reference View**.
+   - **View must NEVER know or directly reference Model**.
+   - **Controller is strictly the middle component** that receives signals from View, mediates operations to/from Model, and passes responses back to View or downstream services.
+   - Signal buses (`.mvc-bus-view-ctrl` and `.mvc-bus-ctrl-model`) with animated pulsing dots visually depict this bidirectional flow (`View ⇄ Controller` and `Controller ⇄ Model`), with zero direct physical connection between View and Model.
 
-3. **Connected Database Services**:
-   Every service must visibly connect to its designated persistent storage layer:
-   - **SQL Database**: Managed PostgreSQL cluster (dedicated schemas: `session`, `class`, `harness`, `notification`, `rag`).
-   - **NoSQL Database**: MongoDB for `Service-Agent` configs; Redis RAM cluster for `Service-Harness` session state and Zero-Disk AAC-ADTS audio ring buffer.
+3. **Compact Card Height & Minimal Footer**:
+   - Eliminates the messy 12-line text blocks per card, reducing card height from ~250px to ~110px.
+   - A single clean footer line provides the service role summary (or dynamic chunk / upload status badges) with ample whitespace and zero visual clutter.
 
 ---
 

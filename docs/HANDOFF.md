@@ -49,8 +49,17 @@ Focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deplo
       - Replaced horizontal buttons with unified `<select id="use-case-select">` and dedicated `<button id="btn-arch-play-scenario">` (`▶ Play Scenario` / `⏸ Pause`).
       - Polished Lexis Voice Diagram: removed down arrow character, widened LLM Server card (`min-w-[200px] max-w-[260px]`), and embedded Lucide vector chevron dynamically rotating on branch expansion (`> ` to `v`).
       - Expanded test suite to 54 passing tests repo-wide (`54/54` pass, 0 regressions).
+   8. **Phase 8 — Icon-Only MVC Subcomponent Triad & Strict Mediator Bus Refinement:**
+      - **Cleaned Card Clutter**: Replaced verbose 12-line text descriptions in all 16 microservice cards with a clean `.mvc-triad-stage`, reducing card height from ~250px to ~110px and eliminating visual clutter.
+      - **Strict Lucide Icons Only**: Subcomponents represented exclusively by Lucide vector glyphs: View (`eye-dashed`), Controller (`gamepad-directional`), Model (`book-bookmark`).
+      - **Decoupled Architectural Invariant (Controller as Mediator Hub)**: Physically and logically decoupled Model and View (zero direct connection). Positioned Controller in the center as the mediator hub, with animated bidirectional signal buses (`View ⇄ Controller` and `Controller ⇄ Model`).
+   9. **Phase 9 — 100% Zoom Expanded View, Send Request Batching, & Internal MVC 6-Phase Lifecycle:**
+      - **100% Zoom Full View**: Added `#btn-arch-zoom` toggle (`100% View` / `Fit Screen`) with `Escape` hotkey and URL param support (`?diagram=full-architecture&zoom=100`), opening a fixed full-screen widescreen canvas with spacious card gaps and crystal-clear SVG connection path rails.
+      - **Send Request Split Button & Batch Dropdown**: Replaced "Next Step" with `#btn-arch-send-request` and `#dropdown-arch-batch`, allowing users to dispatch 1x, 3x, or 5x requests through the live architecture.
+      - **Subcomponent Internal Signal Lifecycle (`animateServiceMvcCycle`)**: Implemented the exact 6-phase sequence inside each service: `Request Inbound ➔ Controller (.mvc-phase-1) ➔ Model (.mvc-phase-2) ➔ Controller (.mvc-phase-3) ➔ View (.mvc-phase-4) ➔ Controller (.mvc-phase-5) ➔ Next Service via SVG Path (.mvc-phase-6)`.
+      - **Verification & Zero Regression**: Verified with Headless Chrome 1680x1100 screenshot (`view3_100_percent_view_verified.png`, 575 KB) and confirmed all 54 tests pass cleanly (`54/54`).
 - **Remaining:**
-  - Continuous enhancement and live deployment monitoring.
+  - Commit and push Phase 8 & 9 updates to GitHub (`dev` and `main`) for automated Cloudflare Pages deployment to `https://archify.omnicrafts.uk`.
 - **Urgency:** low (completed milestone handoff).
 
 ## Scope and guardrails

@@ -15,6 +15,27 @@
   'use strict';
 
   function render() {
+    const mvcStageHtml = `
+            <div class="mvc-triad-stage">
+              <div class="mvc-subnode mvc-service mvc-subnode-view" title="View" data-sub="view">
+                <span class="mvc-icon-wrap" data-lucide="eye-dashed">
+                  <svg class="lucide lucide-eye-dashed" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.054 18.946a11 11 0 0 1-2.11 0"/><path d="M13.054 5.054a11 11 0 0 0-2.11-.001"/><path d="M17.072 6.274a11 11 0 0 1 1.753 1.173"/><path d="M18.825 16.552a11 11 0 0 1-1.753 1.174"/><path d="M2.514 13.303a11 11 0 0 1-.452-.954 1 1 0 0 1 0-.697 11 11 0 0 1 .45-.955"/><path d="M21.485 10.697a11 11 0 0 1 .453.955 1 1 0 0 1 0 .697 11 11 0 0 1-.453.954"/><path d="M5.173 7.448a11 11 0 0 1 1.753-1.174"/><path d="M6.926 17.726a11 11 0 0 1-1.753-1.174"/><circle cx="12" cy="12" r="3"/></svg>
+                </span>
+              </div>
+              <div class="mvc-bus mvc-bus-view-ctrl"><div class="mvc-bus-line"></div><div class="mvc-bus-pulse"></div></div>
+              <div class="mvc-subnode mvc-controller mvc-subnode-controller" title="Controller" data-sub="controller">
+                <span class="mvc-icon-wrap" data-lucide="gamepad-directional">
+                  <svg class="lucide lucide-gamepad-directional" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11.146 15.854a1.207 1.207 0 0 1 1.708 0l1.56 1.56A2 2 0 0 1 15 18.828V21a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1v-2.172a2 2 0 0 1 .586-1.414z"/><path d="M18.828 15a2 2 0 0 1-1.414-.586l-1.56-1.56a1.207 1.207 0 0 1 0-1.708l1.56-1.56A2 2 0 0 1 18.828 9H21a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1z"/><path d="M6.586 14.414A2 2 0 0 1 5.172 15H3a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h2.172a2 2 0 0 1 1.414.586l1.56 1.56a1.207 1.207 0 0 1 0 1.708z"/><path d="M9 3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2.172a2 2 0 0 1-.586 1.414l-1.56 1.56a1.207 1.207 0 0 1-1.708 0l-1.56-1.56A2 2 0 0 1 9 5.172z"/></svg>
+                </span>
+              </div>
+              <div class="mvc-bus mvc-bus-ctrl-model"><div class="mvc-bus-line"></div><div class="mvc-bus-pulse"></div></div>
+              <div class="mvc-subnode mvc-model mvc-subnode-model" title="Model" data-sub="model">
+                <span class="mvc-icon-wrap" data-lucide="book-bookmark">
+                  <svg class="lucide lucide-book-bookmark" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.751a.25.25 0 00.407.195l2.28-1.834a.5.5 0 01.627 0l2.28 1.834A.25.25 0 0016 9.751V2"/><path d="M4 19.5v-15A2.5 2.5 0 016.5 2H19a1 1 0 011 1v18a1 1 0 01-1 1H6.5a1 1 0 010-5H20"/></svg>
+                </span>
+              </div>
+            </div>`;
+
     return `
     <div id="view-full-architecture" class="diagram-view hidden w-full full-arch-viewport">
       
@@ -51,17 +72,42 @@
               <span id="icon-arch-play">Play</span>
               <span id="icon-arch-pause" style="display:none;">Pause</span>
             </button>
-            <button id="btn-arch-step-next" class="btn-ctrl" title="Step forward one interaction">
-              <span class="btn-icon">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" x2="19" y1="5" y2="19"/></svg>
-              </span>
-              <span>Next Step</span>
-            </button>
+            <div class="send-request-group">
+              <button id="btn-arch-send-request" class="btn-ctrl btn-send-request" title="Send request through pipeline">
+                <span class="btn-icon">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="transform: rotate(45deg);"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                </span>
+                <span id="label-arch-send-count">Send Request</span>
+              </button>
+              <button id="btn-arch-toggle-batch" class="btn-ctrl btn-batch-toggle" title="Batch Request Size">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
+              </button>
+              <div id="dropdown-arch-batch" class="dropdown-arch-batch hidden">
+                <button class="dropdown-batch-item active" data-count="1">
+                  <span>Send 1 Request</span>
+                  <span class="batch-badge">1x</span>
+                </button>
+                <button class="dropdown-batch-item" data-count="3">
+                  <span>Send 3 Requests</span>
+                  <span class="batch-badge">3x</span>
+                </button>
+                <button class="dropdown-batch-item" data-count="5">
+                  <span>Send 5 Requests</span>
+                  <span class="batch-badge">5x</span>
+                </button>
+              </div>
+            </div>
             <button id="btn-arch-reset" class="btn-ctrl" title="Reset scenario state">
               <span class="btn-icon">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
               </span>
               <span>Reset</span>
+            </button>
+            <button id="btn-arch-zoom" class="btn-ctrl btn-zoom" title="Toggle 100% Expanded View / Fit Screen">
+              <span class="btn-icon">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              </span>
+              <span id="label-arch-zoom">100% View</span>
             </button>
           </div>
         </div>
@@ -73,6 +119,9 @@
         <!-- SVG Interactive Connection Paths -->
         <svg id="full-arch-svg" class="full-arch-svg-overlay" xmlns="http://www.w3.org/2000/svg">
           <defs>
+            <marker id="arrow-default" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 7 5 L 0 8.5 z" fill="rgba(100, 116, 139, 0.4)" />
+            </marker>
             <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 1 L 8 5 L 0 9 z" fill="#38bdf8" />
             </marker>
@@ -109,18 +158,8 @@
               </div>
               <span class="service-port">:3000</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">HTTP/WS</span></div>
-              <div class="mvc-desc">Next.js Server Actions, Axios, WS Client</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>View / UI</span><span class="badge-protocol">React 18</span></div>
-              <div class="mvc-desc">Student &amp; Mentor Real-Time Audio Dashboards</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">Store</span></div>
-              <div class="mvc-desc">Zustand State Store &amp; Zod Schema Validation</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>WS Client · React 18</span></div>
           </div>
 
           <!-- Apache APISIX Gateway -->
@@ -134,18 +173,8 @@
               </div>
               <span class="service-port">:9080</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Ingress Route</span><span class="badge-protocol">TLS/WS</span></div>
-              <div class="mvc-desc">Entra JWKS Verification, WebSocket Proxy</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Traffic Policy</span><span class="badge-protocol">Plugins</span></div>
-              <div class="mvc-desc">Rate Limit, CORS, Dynamic Upstream Load Balancing</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Route Config</span><span class="badge-protocol">etcd</span></div>
-              <div class="mvc-desc">etcd Discovery, Route Declarations &amp; SSL Certs</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>Entra JWKS · TLS Proxy</span></div>
           </div>
 
           <!-- External IAM Service -->
@@ -159,18 +188,8 @@
               </div>
               <span class="badge-protocol badge-iam">Entra ID</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>OIDC / OAuth2</span><span class="badge-protocol">HTTPS</span></div>
-              <div class="mvc-desc">JWKS Endpoints &amp; JWT Token Grant</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Auth Policy</span><span class="badge-protocol">Claims</span></div>
-              <div class="mvc-desc">Enterprise Tenant Policies &amp; Role-Based Access</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Identity Store</span><span class="badge-protocol">Directory</span></div>
-              <div class="mvc-desc">MS Graph Directory, User Entities &amp; Security Groups</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>OIDC · Claims Provider</span></div>
           </div>
 
         </div>
@@ -190,18 +209,8 @@
               </div>
               <span class="service-port">:8081</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">WS / REST</span></div>
-              <div class="mvc-desc">WS /ws/speech &amp; Audio Stream Endpoints</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">FSM Mux</span></div>
-              <div class="mvc-desc">Voice Orchestrator, Turn FSM &amp; AudioMux (TypeScript)</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">RAM Ring</span></div>
-              <div class="mvc-desc">Zero-Disk AAC-ADTS Ring Buffer (NoSQL Redis)</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>Turn FSM · Audio Mux</span></div>
           </div>
 
           <!-- Service-Session -->
@@ -215,18 +224,8 @@
               </div>
               <span class="service-port">:8080</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">REST API</span></div>
-              <div class="mvc-desc">REST /sessions, Presigned URL Handshake</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">Modulith</span></div>
-              <div class="mvc-desc">Spring Boot Modulith, Outbox Publisher</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">JPA / SQL</span></div>
-              <div class="mvc-desc">SQL Database (schema: session, table: sessions)</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>REST · Outbox Publisher</span></div>
           </div>
 
           <!-- Service-Class -->
@@ -240,18 +239,8 @@
               </div>
               <span class="service-port">:8082</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">REST / AMQP</span></div>
-              <div class="mvc-desc">REST /classes &amp; Event Consumer Listener</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">Domain</span></div>
-              <div class="mvc-desc">Enrollment, Grading Rubrics &amp; Level-Up Progression</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">JPA / SQL</span></div>
-              <div class="mvc-desc">SQL Database (schema: class, entities: enrollments)</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>Rubrics · Level-Up Domain</span></div>
           </div>
 
           <!-- Service-Curriculum -->
@@ -265,18 +254,8 @@
               </div>
               <span class="service-port">:3001</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">REST Ingress</span></div>
-              <div class="mvc-desc">REST /curriculum/syllabus Endpoints (NestJS)</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">Pedagogy</span></div>
-              <div class="mvc-desc">CEFR Syllabus, Rubrics &amp; Practice Tasks Engine</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">SQL / TypeORM</span></div>
-              <div class="mvc-desc">SQL Database (schema: curriculum, tables: lessons)</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>CEFR Syllabus · Pedagogy</span></div>
           </div>
 
           <!-- Service-Agent -->
@@ -290,18 +269,8 @@
               </div>
               <span class="service-port">:50051</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">gRPC / REST</span></div>
-              <div class="mvc-desc">gRPC AgentService &amp; Context Calibration Ingress</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">Adaptive FSM</span></div>
-              <div class="mvc-desc">AI Personas, Dynamic Prompt Directives &amp; Tone FSM</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">NoSQL Mongo</span></div>
-              <div class="mvc-desc">MongoDB (Agent Prompts, Persona Configs &amp; Rubrics)</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>Tone FSM · Context Calibration</span></div>
           </div>
 
           <!-- Service-Notification -->
@@ -315,18 +284,8 @@
               </div>
               <span class="service-port">:8083</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">AMQP / Push</span></div>
-              <div class="mvc-desc">AMQP Topic Listener &amp; Web Push Ingress</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">Dispatcher</span></div>
-              <div class="mvc-desc">Multi-Channel Student Alerts &amp; Digest Queue</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">JPA / SQL</span></div>
-              <div class="mvc-desc">SQL Database (schema: notification, table: alerts)</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>AMQP Consumer · Web Push</span></div>
           </div>
 
           <!-- Message Broker -->
@@ -338,21 +297,11 @@
                 </span>
                 <span class="service-name">Message Broker</span>
               </div>
-              <span class="badge-protocol badge-broker">AMQP 0-9-1</span>
+              <span class="badge-protocol badge-broker">AMQP</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Protocol Ingress</span><span class="badge-protocol">:5672</span></div>
-              <div class="mvc-desc">AMQP 0-9-1 Endpoints &amp; MQTT Protocol Adapters</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Routing Core</span><span class="badge-protocol">Exchanges</span></div>
-              <div class="mvc-desc">Topic Exchanges, Outbox Fan-Out &amp; DLQ Routing</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Message Store</span><span class="badge-protocol">Queues</span></div>
-              <div class="mvc-desc">Durable Queues &amp; Mnesia Cluster Persistence</div>
-            </div>
-            <div style="padding: 4px 10px 8px 10px;">
+            ${mvcStageHtml}
+            <div class="mvc-card-footer">
+              <span>AMQP 0-9-1</span>
               <div class="amqp-badge" id="badge-amqp">topic.session</div>
             </div>
           </div>
@@ -374,18 +323,8 @@
               </div>
               <span class="badge-protocol badge-sql">:5432</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Connection Pool</span><span class="badge-protocol">PgBouncer</span></div>
-              <div class="mvc-desc">TCP Protocol :5432, Transaction Pooling</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Engine</span><span class="badge-protocol">Postgres 16</span></div>
-              <div class="mvc-desc">ACID Transactions &amp; WAL Streaming Replication</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Schemas</span><span class="badge-protocol">Relational</span></div>
-              <div class="mvc-desc">session, class, harness, notification, outbox</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>PgBouncer · ACID Relational</span></div>
           </div>
 
           <!-- NoSQL Database -->
@@ -399,19 +338,9 @@
               </div>
               <span class="badge-protocol badge-nosql">:6379</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>RESP Ingress</span><span class="badge-protocol">TCP</span></div>
-              <div class="mvc-desc">Redis Serialization Protocol &amp; Cluster Sentinel</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Engine</span><span class="badge-protocol">In-Memory</span></div>
-              <div class="mvc-desc">Session State &amp; Key-Value Fast Eviction</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Zero-Disk RAM</span><span class="badge-protocol">ADTS Ring</span></div>
-              <div class="mvc-desc">Zero-Disk AAC-ADTS Audio Ring Buffer</div>
-            </div>
-            <div style="padding: 4px 10px 8px 10px;">
+            ${mvcStageHtml}
+            <div class="mvc-card-footer">
+              <span>Zero-Disk RAM</span>
               <div class="audio-buffer-pill" id="pill-audio-buffer">
                 <span>●</span> <span id="label-audio-chunks">Buffer: 0 chunks</span>
               </div>
@@ -429,19 +358,9 @@
               </div>
               <span class="badge-protocol badge-storage">S3 API</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>S3 API Ingress</span><span class="badge-protocol">HTTPS</span></div>
-              <div class="mvc-desc">Presigned URL Handshake &amp; TLS 1.3 Streaming</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Lifecycle</span><span class="badge-protocol">Multipart</span></div>
-              <div class="mvc-desc">Multipart Mux Upload &amp; Global CDN Cache</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Object Store</span><span class="badge-protocol">Buckets</span></div>
-              <div class="mvc-desc">Fragmented .m4a Master Audio Chunks Storage</div>
-            </div>
-            <div style="padding: 4px 10px 8px 10px;">
+            ${mvcStageHtml}
+            <div class="mvc-card-footer">
+              <span>Multipart Mux</span>
               <div class="r2-badge" id="badge-r2-status">Standby</div>
             </div>
           </div>
@@ -463,18 +382,8 @@
               </div>
               <span class="service-port">:8000</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">gRPC / REST</span></div>
-              <div class="mvc-desc">Speech Stream Endpoints (/stt &amp; /tts)</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">Voice AI</span></div>
-              <div class="mvc-desc">Whisper / Parakeet STT &amp; Kokoro TTS Engine</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">Weights</span></div>
-              <div class="mvc-desc">ONNX Acoustic Models, Tokenizer &amp; Vocoder</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>Whisper STT · Kokoro TTS</span></div>
           </div>
 
           <!-- Decision Server -->
@@ -488,18 +397,8 @@
               </div>
               <span class="badge-protocol badge-decision">:8092</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">HTTP API</span></div>
-              <div class="mvc-desc">POST /intent/classify Fast Ingress</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">System 1</span></div>
-              <div class="mvc-desc">Fast Intent &amp; Relevance Classifier (&lt;70ms)</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">ModernBERT</span></div>
-              <div class="mvc-desc">ModernBERT-Large 421M Parameters</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>ModernBERT 421M · Fast Intent</span></div>
           </div>
 
           <!-- LLM Server -->
@@ -513,18 +412,8 @@
               </div>
               <span class="badge-protocol badge-llm">:8000</span>
             </div>
-            <div class="mvc-controller">
-              <div class="mvc-label"><span>Controller</span><span class="badge-protocol">OpenAI API</span></div>
-              <div class="mvc-desc">POST /v1/chat/completions Stream Ingress</div>
-            </div>
-            <div class="mvc-service">
-              <div class="mvc-label"><span>Service</span><span class="badge-protocol">System 2</span></div>
-              <div class="mvc-desc">Deep Pedagogical Reasoning &amp; Dialogue Flow</div>
-            </div>
-            <div class="mvc-model">
-              <div class="mvc-label"><span>Model</span><span class="badge-protocol">Qwen AWQ</span></div>
-              <div class="mvc-desc">Qwen 1.5B/7B AWQ PagedAttention Engine</div>
-            </div>
+            ${mvcStageHtml}
+            <div class="mvc-card-footer"><span>Qwen 7B AWQ · Deep Reasoning</span></div>
           </div>
 
         </div>
