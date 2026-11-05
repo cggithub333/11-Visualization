@@ -1,0 +1,59 @@
+/* RunPod Worker Cards */
+.worker-card {
+  width: 58px;
+  height: 68px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #232b3b;
+  background-color: #131720;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  user-select: none;
+}
+
+.worker-ready {
+  background-color: #0f1d19;
+  border-color: #234e40;
+  color: #34d399;
+}
+.worker-ready svg {
+  stroke: #34d399;
+}
+
+.worker-run {
+  background-color: #1c182c;
+  border-color: #5b3e8a;
+  color: #c084fc;
+}
+.worker-run svg {
+  stroke: #c084fc;
+}
+
+.worker-init {
+  background-color: #0e1e28;
+  border-color: #224c63;
+  color: #38bdf8;
+}
+.worker-init svg {
+  stroke: #38bdf8;
+  animation: spin-slow 2s linear infinite;
+}
+
+.worker-idle {
+  background-color: #11141a;
+  border-color: #1a202a;
+  color: #4b5563;
+  opacity: 0.6;
+}
+.worker-idle svg {
+  stroke: #4b5563;
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
