@@ -615,7 +615,8 @@ class ServerlessSimulation {
     DiagramRegistry.register({
       id: 'runpod-serverless',
       aliases: ['runpod'],
-      label: '1. RunPod: Serverless GPU & Auto-Scaling',
+      label: 'RunPod: Serverless GPU & Auto-Scaling',
+      hidden: true,
       defaultSelected: false,
       mount(viewport) {
         if (RunPodTemplate && typeof RunPodTemplate.mount === 'function') {

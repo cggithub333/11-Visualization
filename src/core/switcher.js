@@ -19,8 +19,9 @@
   /**
    * Switch the active diagram in the hub.
    * Toggles .hidden, invokes lifecycle hooks (deactivate/activate/resize), and updates dropdown.
+   * Appends/updates the diagram parameter in the URL so page reloads preserve selection.
    */
-  function switchDiagram(idOrAlias) {
+  function switchDiagram(idOrAlias, updateUrl = true) {
     if (!DiagramRegistry || typeof DiagramRegistry.get !== 'function') return;
 
     const target = DiagramRegistry.get(idOrAlias);
@@ -62,7 +63,20 @@
 
     currentDiagramId = target.id;
 
-    // 4. Activate new diagram
+    // 4. Update URL parameter so diagram selection persists across page reload
+    if (updateUrl && typeof window !== 'undefined' && window.location && window.history) {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('diagram') !== target.id) {
+          url.searchParams.set('diagram', target.id);
+          window.history.replaceState({ diagram: target.id }, '', url.toString());
+        }
+      } catch (err) {
+        // Fallback for file:// or mock environments
+      }
+    }
+
+    // 5. Activate new diagram
     if (typeof target.activate === 'function') {
       target.activate();
     }
@@ -88,6 +102,7 @@
       // Populate select if empty or mismatched
       if (select.options.length === 0 && diagrams.length > 0) {
         diagrams.forEach((diag) => {
+          if (diag.hidden) return; // Hide hidden diagrams from dropdown
           const opt = document.createElement('option');
           opt.value = diag.id;
           opt.textContent = diag.label;
@@ -97,13 +112,23 @@
       }
 
       select.addEventListener('change', (e) => {
-        switchDiagram(e.target.value);
+        switchDiagram(e.target.value, true);
       });
     }
 
     if (btnBack) {
       btnBack.addEventListener('click', () => {
-        switchDiagram('runpod-serverless');
+        switchDiagram('runpod-serverless', true);
+      });
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', () => {
+        const params = new URLSearchParams(window.location.search);
+        const diagramParam = params.get('diagram');
+        if (diagramParam && DiagramRegistry && DiagramRegistry.get(diagramParam)) {
+          switchDiagram(diagramParam, false);
+        }
       });
     }
 
@@ -145,7 +170,7 @@
     // 3. Initialize UI Switcher
     initDiagramSwitcher();
 
-    // 4. Resolve initial diagram: URL param -> defaultSelected -> first registered
+    // 4. Resolve initial diagram: URL param -> defaultSelected -> first visible registered
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
     const diagramParam = params.get('diagram');
 
@@ -153,11 +178,12 @@
     if (diagramParam && DiagramRegistry && DiagramRegistry.get(diagramParam)) {
       initialId = diagramParam;
     } else {
-      const defaultDiag = diagrams.find((d) => d.defaultSelected);
-      initialId = defaultDiag ? defaultDiag.id : (diagrams[0] ? diagrams[0].id : 'runpod-serverless');
+      const visible = diagrams.filter((d) => !d.hidden);
+      const defaultDiag = visible.find((d) => d.defaultSelected) || diagrams.find((d) => d.defaultSelected);
+      initialId = defaultDiag ? defaultDiag.id : (visible[0] ? visible[0].id : (diagrams[0] ? diagrams[0].id : 'lexis-voice'));
     }
 
-    switchDiagram(initialId);
+    switchDiagram(initialId, true);
 
     // 5. Dispatch URL query parameters to active diagram
     if (DiagramRegistry) {

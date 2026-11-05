@@ -29,11 +29,14 @@ Focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deplo
   3. **Phase 3 — Diagram 3: Adaptive Context Switching & Dynamic FSM Pipeline:**
      - Created modular diagram plugin `src/diagrams/adaptive-context-switch/` (`styles.css`, `template.js`, `context-engine.js`) and registered into `DiagramRegistry` (`id: 'adaptive-context-switch'`).
      - Faithfully modeled 100% of `01-Service-Harness-Ts/src/domain/policy/adaptive-context-switching.policy.ts`: initial sub-context entity locking on Turn 1, good turns threshold (4-5), SIBLING_SUB_CONTEXT_CLUSTERS, 15-Template Bank bridge phrase interpolation, anti-deadlock rescue on >2 consecutive weak turns, off-topic redirect badge, and real-time prompt injection directive (< 45 tokens) strictly forbidding meta-headers.
-     - Integrated into `index.html` navigation dropdown and updated `tests/hub-integration.test.mjs`.
-     - Authored `tests/diagram-adaptive-context-switch.test.mjs`, expanding test suite from 28 to 36 tests (`36/36` passed, 0 regressions).
-     - Generated automated Headless Chrome screenshot verification (`templates/edit/verify/view3_adaptive_context_verified.png`, 114 KB).
+  4. **Phase 4 — RunPod Option Hiding, URL Diagram Persistence, & Diagram 3 Visual Routes/Interactive Demo:**
+     - **Hidden RunPod Option**: Preserved RunPod in `DiagramRegistry` and `#diagram-viewport` mount, but set `hidden: true` and added `hidden` attribute to `<option value="runpod-serverless">` in `index.html` dropdown. Filtered hidden entries in dynamic select generation in `src/core/switcher.js`.
+     - **URL Diagram State Persistence**: Updated `switchDiagram` and `bootstrapDiagrams` in `src/core/switcher.js` to automatically set and update `?diagram=<id>` via `window.history.replaceState`. On page reload/refresh, the active diagram is read from the URL param so it stays on the selected diagram (e.g. `?diagram=adaptive-context-switch`) rather than falling back to the second diagram. Added `popstate` listener for browser back/forward navigation.
+     - **Diagram 3 Visual Topology & Routes**: Engineered orthogonal canvas connection rails and animated directional signal buses across all 6 hardware components (Student Station, API Gateway, Session State DB, Harness FSM Engine, vLLM Qwen 1.5B/7B AWQ, and Kokoro TTS) on `#context-flow-canvas`.
+     - **Interactive Request Demo Flow**: Built full interactive controls in `template.js` and `context-engine.js`: "Send Turn Request" split button with batch sizes (1x, 3x, 5x), quality scenario triggers ("Simulate Good Turn 4/5", "Simulate Weak Turn Hold/Rescue", "Simulate Off-Topic Redirect"), Auto-Run live conversation mode, Pause/Resume, and Reset Session. Animated multi-hop signal packets with node glowing and live 6-step progress status banner.
+     - **Test Suite Expansion**: Added `tests/diagram-url-persistence.test.mjs`, expanding test suite from 36 to 40 tests (`40/40` passing, 0 regressions). Captured and verified visual screenshot (`templates/edit/verify/view3_adaptive_context_verified.png`, 141 KB).
 - **Remaining:**
-  - None — all requested refactoring, GitHub synchronization, Cloudflare Pages deployment, tunnel cleanup, and Diagram 3 implementation tasks are complete.
+  - None — all requested changes (RunPod hiding, URL param persistence, Diagram 3 visual routes & request demo) are verified and complete.
 - **Urgency:** low (completed milestone handoff).
 
 ## Scope and guardrails
@@ -87,9 +90,9 @@ Focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deplo
 
 | Check | Command | Outcome | When |
 | :--- | :--- | :--- | :--- |
-| **Node.js Unit & Integration Suite (7 files, 28 tests)** | `node --test tests/*.test.mjs` | `PASS` (`28/28` passed, `0` failed in `~840ms`) | Post-Phase 1 & Post-Phase 2 (`3419fa3`) |
-| **Headless Chrome Visual & Runtime Parity** | `google-chrome-stable --headless --dump-dom ...` (inside `tests/hub-integration.test.mjs` & visual screenshots) | `PASS` (Zero console/page errors; verified RunPod, Lexis, vLLM, and Ollama views) | Post-Phase 1 & Post-Phase 2 |
-| **Live Production Custom Domain & Assets** | `curl -fsSI https://archify.omnicrafts.uk/` (plus `/src/core/switcher.js`, `/src/diagrams/runpod-serverless/engine.js`, `/src/diagrams/lexis-voice/lexis-engine.js`) | `PASS` (`HTTP/2 200 OK` across all 4 endpoints) | Post-Phase 2 |
+| **Node.js Unit & Integration Suite (9 files, 40 tests)** | `node --test tests/*.test.mjs` | `PASS` (`40/40` passed, `0` failed in `~1.5s`) | Post-Phase 4 |
+| **Headless Chrome Visual & Runtime Parity** | `google-chrome-stable --headless --dump-dom ...` (inside `tests/hub-integration.test.mjs` & visual screenshots) | `PASS` (Zero console/page errors; verified RunPod, Lexis, vLLM, Ollama, and Adaptive Context views) | Post-Phase 4 |
+| **Live Production Custom Domain & Assets** | `curl -fsSI https://archify.omnicrafts.uk/` (plus `/src/core/switcher.js`, `/src/diagrams/runpod-serverless/engine.js`, `/src/diagrams/lexis-voice/lexis-engine.js`, `/src/diagrams/adaptive-context-switch/context-engine.js`) | `PASS` (`HTTP/2 200 OK` across all endpoints) | Post-Phase 2 / 4 |
 | **Legacy DNS Record Removal** | Cloudflare DNS API query for `architecture.omnicrafts.uk` in `omnicrafts.uk` zone | `PASS` (`legacy_architecture_dns_count=0`, `archify_dns_count=1`) | Wave 2 & Audit |
 | **Local `/etc/cloudflared` Ingress & Service Health** | `cloudflared tunnel --config /etc/cloudflared/config.yml ingress validate && systemctl is-active cloudflared.service` | `PASS` (`OK`, `active`, 4/4 `http2` connections registered) | Wave 2 & Audit |
 

@@ -44,6 +44,7 @@
         id: manifest.id,
         aliases: Array.isArray(manifest.aliases) ? [...manifest.aliases] : [],
         label: manifest.label,
+        hidden: Boolean(manifest.hidden),
         defaultSelected: Boolean(manifest.defaultSelected),
         mount: typeof manifest.mount === 'function' ? manifest.mount : null,
         init: typeof manifest.init === 'function' ? manifest.init : null,
