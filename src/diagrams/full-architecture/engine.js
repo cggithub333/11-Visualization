@@ -52,13 +52,29 @@
       };
       this.boundHandlers = {};
       this._activeMvcTimeouts = [];
+      this._activeSleepResolvers = [];
+      this._activePacketAnimations = [];
+      this._batchSpeedFactor = 1.0;
       this._playToken = 0;
       this._playRun = 0;
       this._stepPromise = null;
     }
 
     sleep(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
+      return new Promise((resolve) => {
+        let t = null;
+        const cleanup = () => {
+          if (this._activeSleepResolvers) {
+            const idx = this._activeSleepResolvers.indexOf(cleanup);
+            if (idx !== -1) this._activeSleepResolvers.splice(idx, 1);
+          }
+          if (t) clearTimeout(t);
+          resolve();
+        };
+        t = setTimeout(cleanup, ms);
+        this._activeSleepResolvers = this._activeSleepResolvers || [];
+        this._activeSleepResolvers.push(cleanup);
+      });
     }
 
     getHops(step) {
@@ -413,9 +429,13 @@
       group.appendChild(labelGroup);
       packetsGroup.appendChild(group);
 
-      setTimeout(() => {
+      const speedFactor = this._batchSpeedFactor || 1.0;
+      const loopDur = Math.max(100, Math.round(1200 / speedFactor));
+      const t = setTimeout(() => {
         try { group.remove(); } catch (e) {}
-      }, 1200);
+      }, loopDur);
+      this._activeMvcTimeouts = this._activeMvcTimeouts || [];
+      this._activeMvcTimeouts.push(t);
     }
 
     async playStep(step, highlightClass) {
@@ -423,6 +443,8 @@
       const token = this._playToken;
       const hops = this.getHops(step);
       const isRespStep = Boolean(step.isResponse);
+      const speedFactor = this._batchSpeedFactor || 1.0;
+      const hopMs = Math.max(70, Math.round(HOP_MS / speedFactor));
 
       if (isRespStep) {
         this.renderResponsePhase(step);
@@ -431,13 +453,13 @@
       if (hops.length === 1) {
         this.pulseNode(hops[0]);
         this.emitSelfLoopVisual(hops[0], step.label, highlightClass);
-        await this.sleep(HOP_MS);
+        await this.sleep(hopMs);
         if (token !== this._playToken) return;
       } else {
         for (let i = 0; i < hops.length - 1; i++) {
           this.highlightPath(hops[i], hops[i + 1], highlightClass, true);
           this.emitPacket(hops[i], hops[i + 1], highlightClass, step.label, isRespStep);
-          await this.sleep(HOP_MS);
+          await this.sleep(hopMs);
           if (token !== this._playToken) return;
           this.pulseNode(hops[i + 1]);
         }
@@ -448,13 +470,13 @@
       if (hops.length === 1) {
         this.pulseNode(hops[0]);
         this.emitSelfLoopVisual(hops[0], step.response.label, highlightClass);
-        await this.sleep(HOP_MS);
+        await this.sleep(hopMs);
         if (token !== this._playToken) return;
       } else {
         for (let i = hops.length - 1; i > 0; i--) {
           this.highlightPath(hops[i], hops[i - 1], highlightClass, true);
           this.emitPacket(hops[i], hops[i - 1], highlightClass, step.response.label, true);
-          await this.sleep(HOP_MS);
+          await this.sleep(hopMs);
           if (token !== this._playToken) return;
           this.pulseNode(hops[i - 1]);
         }
@@ -494,9 +516,20 @@
 
     pause() {
       this.state.isPlaying = false;
+      this.state.isBatchRunning = false;
+      this._batchSpeedFactor = 1.0;
       this._playRun += 1;
       this.cancelPlayback();
+      this.clearMvcAnimations();
       this.updatePlayPauseIcons();
+      if (!this.headless && typeof document !== 'undefined') {
+        const sendBtn = document.getElementById('btn-arch-send-request');
+        const labelEl = document.getElementById('label-arch-send-count');
+        if (sendBtn) sendBtn.classList.remove('sending');
+        if (labelEl) {
+          labelEl.textContent = this.state.batchSize === 1 ? 'Send Request' : `Send ${this.state.batchSize} Requests`;
+        }
+      }
     }
 
     toggleZoom() {
@@ -547,6 +580,17 @@
         this._activeMvcTimeouts.forEach((tid) => clearTimeout(tid));
         this._activeMvcTimeouts = [];
       }
+      if (this._activeSleepResolvers) {
+        const resolvers = this._activeSleepResolvers.slice();
+        this._activeSleepResolvers = [];
+        resolvers.forEach((fn) => fn());
+      }
+      if (this._activePacketAnimations) {
+        this._activePacketAnimations.forEach((anim) => {
+          if (typeof anim.cancel === 'function') anim.cancel();
+        });
+        this._activePacketAnimations = [];
+      }
       if (!this.headless && typeof document !== 'undefined') {
         const packetsGroup = document.getElementById('svg-packets-group');
         if (packetsGroup) {
@@ -561,6 +605,9 @@
         return Promise.resolve();
       }
 
+      const speedFactor = this._batchSpeedFactor || 1.0;
+      const mvcDuration = Math.max(30, Math.round(350 / speedFactor));
+
       return new Promise((resolve) => {
         const nodeEl = document.getElementById(`node-${nodeId}`);
         if (nodeEl) {
@@ -569,7 +616,7 @@
             nodeEl.classList.remove('node-active-cyan');
             if (typeof callback === 'function') callback();
             resolve();
-          }, 350);
+          }, mvcDuration);
           this._activeMvcTimeouts = this._activeMvcTimeouts || [];
           this._activeMvcTimeouts.push(t);
         } else {
@@ -607,20 +654,14 @@
       group.setAttribute('class', isResponse ? 'moving-packet moving-packet-response' : 'moving-packet');
       group.setAttribute('style', `color: ${fillColor}`);
 
-      const dotGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
-      anim.setAttribute('path', pathD);
-      anim.setAttribute('dur', '1.1s');
-      anim.setAttribute('repeatCount', '1');
-      anim.setAttribute('fill', 'freeze');
-      dotGroup.appendChild(anim);
-
-      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      circle.setAttribute('r', '5');
-      circle.setAttribute('class', packetClass);
-      circle.setAttribute('fill', fillColor);
-      dotGroup.appendChild(circle);
-      group.appendChild(dotGroup);
+      // Temporary path for length calculation and geometry interpolation
+      const tempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      tempPath.setAttribute('d', pathD);
+      tempPath.setAttribute('fill', 'none');
+      tempPath.setAttribute('stroke', 'none');
+      tempPath.setAttribute('opacity', '0');
+      tempPath.setAttribute('pointer-events', 'none');
+      group.appendChild(tempPath);
 
       let shortLabel = label;
       if (!shortLabel && this.state) {
@@ -683,15 +724,91 @@
         group.appendChild(labelGroup);
       }
 
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('r', '5');
+      circle.setAttribute('class', packetClass);
+      circle.setAttribute('fill', fillColor);
+
       packetsGroup.appendChild(group);
 
-      if (typeof anim.beginElement === 'function') {
-        try { anim.beginElement(); } catch (e) {}
+      let totalLen = 0;
+      let startPt = { x: 0, y: 0 };
+      try {
+        totalLen = tempPath.getTotalLength();
+        if (totalLen > 0) {
+          const pt = tempPath.getPointAtLength(0);
+          startPt = { x: pt.x, y: pt.y };
+        }
+      } catch (e) {
+        totalLen = 0;
       }
 
-      setTimeout(() => {
-        try { group.remove(); } catch (e) {}
-      }, 1200);
+      circle.setAttribute('cx', String(startPt.x));
+      circle.setAttribute('cy', String(startPt.y));
+      group.appendChild(circle);
+
+      const speedFactor = this._batchSpeedFactor || 1.0;
+      const baseDuration = 1100;
+      const duration = Math.max(70, Math.round(baseDuration / speedFactor));
+
+      let startTime = null;
+      let rafId = null;
+      let isDone = false;
+      let safetyTimeout = null;
+
+      const animEntry = {
+        group,
+        cancel: () => {
+          if (isDone) return;
+          isDone = true;
+          if (rafId) cancelAnimationFrame(rafId);
+          if (safetyTimeout) clearTimeout(safetyTimeout);
+          try { group.remove(); } catch (e) {}
+        }
+      };
+
+      this._activePacketAnimations = this._activePacketAnimations || [];
+      this._activePacketAnimations.push(animEntry);
+
+      const stepAnim = (timestamp) => {
+        if (isDone) return;
+        if (!startTime) startTime = timestamp;
+        const elapsed = timestamp - startTime;
+        const progress = duration > 0 ? Math.min(elapsed / duration, 1) : 1;
+
+        if (totalLen > 0) {
+          try {
+            const pt = tempPath.getPointAtLength(progress * totalLen);
+            circle.setAttribute('cx', String(pt.x));
+            circle.setAttribute('cy', String(pt.y));
+          } catch (e) {}
+        }
+
+        if (progress < 1) {
+          rafId = requestAnimationFrame(stepAnim);
+        } else {
+          isDone = true;
+          if (safetyTimeout) clearTimeout(safetyTimeout);
+          const idx = this._activePacketAnimations ? this._activePacketAnimations.indexOf(animEntry) : -1;
+          if (idx !== -1) this._activePacketAnimations.splice(idx, 1);
+          try { group.remove(); } catch (e) {}
+        }
+      };
+
+      rafId = requestAnimationFrame(stepAnim);
+
+      safetyTimeout = setTimeout(() => {
+        animEntry.cancel();
+      }, duration + 400);
+    }
+
+    getBatchSpeedFactor(numRequests) {
+      if (numRequests >= 100) return 14.0;
+      if (numRequests >= 50) return 9.0;
+      if (numRequests >= 20) return 5.0;
+      if (numRequests >= 10) return 3.0;
+      if (numRequests >= 5) return 1.8;
+      return 1.0;
     }
 
     async sendRequest(count) {
@@ -706,6 +823,8 @@
       }
 
       this.state.isBatchRunning = true;
+      const speedFactor = this.getBatchSpeedFactor(numRequests);
+      this._batchSpeedFactor = speedFactor;
 
       const sendBtn = document.getElementById('btn-arch-send-request');
       const labelEl = document.getElementById('label-arch-send-count');
@@ -713,6 +832,9 @@
 
       const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
       const totalSteps = currentCase.steps.length;
+
+      const stepSleepMs = Math.max(10, Math.round(150 / speedFactor));
+      const interReqGap = Math.max(15, Math.round(400 / speedFactor));
 
       try {
         for (let req = 1; req <= numRequests; req++) {
@@ -750,15 +872,16 @@
             await this.playStep(step, highlightClass);
             if (!this.state.isBatchRunning) break;
 
-            await this.sleep(150);
+            await this.sleep(stepSleepMs);
           }
 
           if (req < numRequests && this.state.isBatchRunning) {
-            await new Promise((r) => setTimeout(r, 400));
+            await this.sleep(interReqGap);
           }
         }
       } finally {
         this.state.isBatchRunning = false;
+        this._batchSpeedFactor = 1.0;
         if (sendBtn) sendBtn.classList.remove('sending');
         if (labelEl) {
           labelEl.textContent = this.state.batchSize === 1 ? 'Send Request' : `Send ${this.state.batchSize} Requests`;
@@ -770,6 +893,7 @@
       this.pause();
       this.cancelPlayback();
       this.state.isBatchRunning = false;
+      this._batchSpeedFactor = 1.0;
       this.clearMvcAnimations();
       this.state.stepIndex = 0;
       this.state.audioChunksCount = 0;

@@ -78,6 +78,9 @@ test('FullArchTemplate exports 3-subblock MVC structure with zero emoji and clea
   assert.ok(container.innerHTML.includes('id="btn-arch-zoom"'), 'has btn-arch-zoom button');
   assert.ok(container.innerHTML.includes('id="btn-arch-toggle-batch"'), 'has btn-arch-toggle-batch button');
   assert.ok(container.innerHTML.includes('id="dropdown-arch-batch"'), 'has dropdown-arch-batch dropdown');
+  for (const count of [1, 5, 10, 20, 50, 100]) {
+    assert.ok(container.innerHTML.includes(`data-count="${count}"`), `has data-count="${count}" batch option`);
+  }
 
   // Check Clean Technical Names
   assert.ok(container.innerHTML.includes('Decision Server'), 'has Decision Server (not Service Laya)');
@@ -167,10 +170,10 @@ test('FullArchitectureSimulation exports class and orchestrates 5 scenarios', as
 
   // Test setBatchSize
   assert.equal(sim.state.batchSize, 1);
-  sim.setBatchSize(3);
-  assert.equal(sim.state.batchSize, 3);
-  sim.setBatchSize(5);
-  assert.equal(sim.state.batchSize, 5);
+  for (const count of [1, 5, 10, 20, 50, 100]) {
+    sim.setBatchSize(count);
+    assert.equal(sim.state.batchSize, count);
+  }
 
   // Test animateServiceMvcCycle resolves in headless mode
   await sim.animateServiceMvcCycle('harness');

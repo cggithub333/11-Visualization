@@ -88,13 +88,25 @@
                   <span>Send 1 Request</span>
                   <span class="batch-badge">1x</span>
                 </button>
-                <button class="dropdown-batch-item" data-count="3">
-                  <span>Send 3 Requests</span>
-                  <span class="batch-badge">3x</span>
-                </button>
                 <button class="dropdown-batch-item" data-count="5">
                   <span>Send 5 Requests</span>
                   <span class="batch-badge">5x</span>
+                </button>
+                <button class="dropdown-batch-item" data-count="10">
+                  <span>Send 10 Requests</span>
+                  <span class="batch-badge">10x</span>
+                </button>
+                <button class="dropdown-batch-item" data-count="20">
+                  <span>Send 20 Requests</span>
+                  <span class="batch-badge">20x</span>
+                </button>
+                <button class="dropdown-batch-item" data-count="50">
+                  <span>Send 50 Requests</span>
+                  <span class="batch-badge">50x</span>
+                </button>
+                <button class="dropdown-batch-item" data-count="100">
+                  <span>Send 100 Requests</span>
+                  <span class="batch-badge">100x</span>
                 </button>
               </div>
             </div>

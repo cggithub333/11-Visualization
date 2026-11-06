@@ -255,10 +255,29 @@
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   padding: 4px;
   z-index: 50;
-  min-width: 140px;
+  min-width: 155px;
+  max-height: 240px;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.dropdown-arch-batch::-webkit-scrollbar {
+  width: 4px;
+}
+
+.dropdown-arch-batch::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dropdown-arch-batch::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 2px;
+}
+
+.dropdown-arch-batch::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 .dropdown-arch-batch.hidden {
@@ -456,7 +475,7 @@
 }
 
 #node-redis {
-  width: 240px;
+  width: 255px;
   flex-shrink: 0;
 }
 
