@@ -120,19 +120,39 @@
         <!-- SVG Interactive Connection Paths & Packets -->
         <svg id="full-arch-svg" class="full-arch-svg-overlay" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <marker id="arrow-default" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 7 5 L 0 8.5 z" fill="rgba(100, 116, 139, 0.25)" />
+            <!-- Default Idle Markers (Crisp Visible Slate-400) -->
+            <marker id="arrow-default-start" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 8 1.5 L 1 5 L 8 8.5 z" fill="#64748b" />
             </marker>
-            <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <marker id="arrow-default" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#64748b" />
+            </marker>
+            <!-- Cyan Active Markers -->
+            <marker id="arrow-start" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 8 1.5 L 1 5 L 8 8.5 z" fill="#38bdf8" />
+            </marker>
+            <marker id="arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 1 L 8 5 L 0 9 z" fill="#38bdf8" />
             </marker>
-            <marker id="arrow-purple" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <!-- Purple Active Markers -->
+            <marker id="arrow-purple-start" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 8 1.5 L 1 5 L 8 8.5 z" fill="#c084fc" />
+            </marker>
+            <marker id="arrow-purple" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 1 L 8 5 L 0 9 z" fill="#a855f7" />
             </marker>
-            <marker id="arrow-orange" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <!-- Orange Active Markers -->
+            <marker id="arrow-orange-start" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 8 1.5 L 1 5 L 8 8.5 z" fill="#f97316" />
+            </marker>
+            <marker id="arrow-orange" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 1 L 8 5 L 0 9 z" fill="#f97316" />
             </marker>
-            <marker id="arrow-emerald" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <!-- Emerald Active Markers -->
+            <marker id="arrow-emerald-start" viewBox="0 0 10 10" refX="2" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 8 1.5 L 1 5 L 8 8.5 z" fill="#10b981" />
+            </marker>
+            <marker id="arrow-emerald" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 1 L 8 5 L 0 9 z" fill="#10b981" />
             </marker>
             <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -459,8 +479,8 @@
                   </div>
                   <span class="badge-protocol badge-decision">:8092</span>
                 </div>
-                <div class="node-subtitle">ModernBERT 421M Engine</div>
-                <div class="node-desc">Subcontext &amp; Anti-Deadlock Intent</div>
+                <div class="node-subtitle">Intent Classification</div>
+                <div class="node-desc">Subcontext &amp; Anti-Deadlock Engine</div>
               </div>
 
               <!-- LLM Server (Stacked Directly Below Decision Server) -->
@@ -474,7 +494,7 @@
                   </div>
                   <span class="badge-protocol badge-llm">:8000</span>
                 </div>
-                <div class="node-subtitle">Qwen 7B AWQ vLLM</div>
+                <div class="node-subtitle">Qwen-2.5B-INSTRUCT · vLLM</div>
                 <div class="node-desc">Directive Reasoning &amp; Dialogue Flow</div>
               </div>
             </div>

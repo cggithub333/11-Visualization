@@ -32,6 +32,7 @@
           source: 'web-client',
           target: 'reverse-proxy',
           protocol: 'HTTPS',
+          label: 'Init Session',
           method: 'POST /api/v1/session/start',
           latency: '2.1 ms',
           desc: 'Student initiates speaking session from browser; hits TLS Reverse Proxy',
@@ -41,6 +42,7 @@
           source: 'reverse-proxy',
           target: 'apisix',
           protocol: 'HTTP/2',
+          label: 'Edge Ingress',
           method: 'PROXY /api/v1/session/start',
           latency: '1.2 ms',
           desc: 'Reverse Proxy terminates TLS and forwards internal HTTP/2 stream to APISIX Gateway',
@@ -50,6 +52,7 @@
           source: 'apisix',
           target: 'iam',
           protocol: 'JWT Bearer',
+          label: 'Validate JWT',
           method: 'OIDC Token Validation',
           latency: '3.8 ms',
           desc: 'APISIX verifies JWT token signature against Microsoft Entra ID JWKS endpoint',
@@ -59,6 +62,7 @@
           source: 'apisix',
           target: 'session',
           protocol: 'REST',
+          label: 'Create Session',
           method: 'POST /sessions',
           latency: '12.4 ms',
           desc: 'APISIX routes authenticated request to Session Service to provision session state',
@@ -68,6 +72,7 @@
           source: 'session',
           target: 'postgres',
           protocol: 'Postgres',
+          label: 'Store Session',
           method: 'INSERT INTO session.sessions',
           latency: '5.2 ms',
           desc: 'Session Service persists session record into PostgreSQL ACID cluster',
@@ -77,6 +82,7 @@
           source: 'session',
           target: 'harness',
           protocol: 'REST',
+          label: 'Init Voice Room',
           method: 'POST /harness/session/init',
           latency: '8.1 ms',
           desc: 'Session Service signals Voice Harness to instantiate Turn FSM & audio buffers',
@@ -92,6 +98,7 @@
           source: 'web-client',
           target: 'reverse-proxy',
           protocol: 'WebSocket',
+          label: 'Audio Stream',
           method: 'WS audio_chunk (AAC-ADTS)',
           latency: '4.5 ms',
           desc: 'Student speaks into microphone; browser streams AAC-ADTS audio chunks via WebSocket',
@@ -101,6 +108,7 @@
           source: 'reverse-proxy',
           target: 'apisix',
           protocol: 'WS Proxy',
+          label: 'Audio Chunk',
           method: 'WS Tunnel /ws/audio',
           latency: '1.4 ms',
           desc: 'Reverse Proxy forwards duplex WebSocket audio stream to APISIX Gateway',
@@ -110,6 +118,7 @@
           source: 'apisix',
           target: 'harness',
           protocol: 'WebSocket',
+          label: 'Audio Stream',
           method: 'WS /ws/speech_stream',
           latency: '2.1 ms',
           desc: 'APISIX streams audio chunks directly down to Voice Harness Orchestrator',
@@ -119,6 +128,7 @@
           source: 'harness',
           target: 'cloudflare-r2',
           protocol: 'RESP',
+          label: 'Buffer Audio',
           method: 'LPUSH session:842a1:audio',
           latency: '1.8 ms',
           desc: 'Harness buffers raw audio chunk into Redis RAM (Zero-Disk in-memory ring buffer)',
@@ -128,6 +138,7 @@
           source: 'harness',
           target: 'ai-voice',
           protocol: 'gRPC',
+          label: 'Speech-to-Text',
           method: 'POST /stt/transcribe',
           latency: '185.0 ms',
           desc: 'Faster-Whisper STT converts real-time audio stream into text transcript',
@@ -137,24 +148,27 @@
           source: 'harness',
           target: 'laya',
           protocol: 'HTTP/2',
+          label: 'Decision Call',
           method: 'POST /intent/classify',
           latency: '48.6 ms',
-          desc: 'Decision Server (ModernBERT 421M System 1) classifies turn intent in <70ms',
+          desc: 'Decision Server classifies turn intent in <70ms',
           payload: '{"intent": "OPINION_ARGUMENT", "relevance": 0.91, "cefrScore": "B1.2", "system1": true}'
         },
         {
           source: 'laya',
           target: 'vllm',
           protocol: 'HTTP/REST',
+          label: 'LLM Reasoning',
           method: 'POST /v1/chat/completions',
           latency: '210.0 ms',
-          desc: 'LLM Server (Qwen 7B AWQ System 2) performs deep cognitive reasoning for teacher reply',
+          desc: 'LLM Server (Qwen-2.5B-INSTRUCT) performs deep cognitive reasoning for teacher reply',
           payload: '{"role": "assistant", "reply": "That is a great point! How do you think battery disposal impacts that?"}'
         },
         {
           source: 'harness',
           target: 'tts',
           protocol: 'REST',
+          label: 'Voice Synthesize',
           method: 'POST /tts/synthesize',
           latency: '120.4 ms',
           desc: 'TTS Server (Kokoro TTS) synthesizes high-fidelity natural teacher voice stream',
@@ -164,6 +178,7 @@
           source: 'harness',
           target: 'web-client',
           protocol: 'WebSocket',
+          label: 'Audio Return',
           method: 'WS bot_audio_chunk',
           latency: '12.2 ms',
           desc: 'Synthesized voice audio streamed back to student browser for immediate audio playback',
@@ -179,6 +194,7 @@
           source: 'harness',
           target: 'harness',
           protocol: 'Internal FSM',
+          label: 'Context Check',
           method: 'EVAL evaluateTurnFsm()',
           latency: '2.1 ms',
           desc: 'Harness FSM detects: Turn 1 lock expired, 4 good turns achieved, topic similarity < 0.65',
@@ -188,6 +204,7 @@
           source: 'harness',
           target: 'agent',
           protocol: 'gRPC',
+          label: 'Fetch Persona',
           method: 'gRPC GetAgentPersonaConfig(:50051)',
           latency: '16.4 ms',
           desc: 'Harness requests new adaptive subcontext persona & prompt directives from Service-Agent',
@@ -197,6 +214,7 @@
           source: 'agent',
           target: 'redis',
           protocol: 'RESP',
+          label: 'Cache State',
           method: 'HSET agent:842a1:context',
           latency: '2.4 ms',
           desc: 'Service-Agent updates Redis memory cache with new conversational context and personality',
@@ -206,6 +224,7 @@
           source: 'harness',
           target: 'curriculum',
           protocol: 'REST',
+          label: 'Fetch Rubrics',
           method: 'GET /curriculum/subcontext/transit',
           latency: '14.2 ms',
           desc: 'Harness fetches new lesson rubric & criteria from Service-Curriculum for the transitioned topic',
@@ -215,6 +234,7 @@
           source: 'harness',
           target: 'laya',
           protocol: 'HTTP',
+          label: 'Decision Inject',
           method: 'POST /directive/inject',
           latency: '12.8 ms',
           desc: 'Harness injects compact <45 token transition directive into Decision Server',
@@ -224,6 +244,7 @@
           source: 'laya',
           target: 'vllm',
           protocol: 'HTTP/REST',
+          label: 'Bridge Prompt',
           method: 'POST /v1/chat/completions (Prefill Cache)',
           latency: '140.0 ms',
           desc: 'vLLM model server generates smooth transitional bridge prompt with zero hallucinations',
@@ -239,6 +260,7 @@
           source: 'web-client',
           target: 'harness',
           protocol: 'WebSocket',
+          label: 'Finish Session',
           method: 'WS session_complete',
           latency: '5.2 ms',
           desc: 'Student completes speaking lesson; Harness triggers AudioMuxService.muxAndUpload()',
@@ -248,6 +270,7 @@
           source: 'harness',
           target: 'cloudflare-r2',
           protocol: 'RESP',
+          label: 'Drain Buffer',
           method: 'LRANGE session:842a1:audio 0 -1',
           latency: '3.4 ms',
           desc: 'AudioMuxService pulls all raw AAC-ADTS segments from Redis RAM in single batch',
@@ -257,6 +280,7 @@
           source: 'harness',
           target: 'harness',
           protocol: 'In-Memory',
+          label: 'Mux AAC->M4A',
           method: 'ffmpeg bitstream copy remux',
           latency: '42.0 ms',
           desc: 'Zero-Disk remuxing via ffmpeg: -c:a copy -f mp4 -movflags empty_moov+default_base_moof+frag_keyframe',
@@ -266,6 +290,7 @@
           source: 'harness',
           target: 'cloudflare-r2',
           protocol: 'S3/R2',
+          label: 'Upload R2',
           method: 'S3 PutObject (Multipart)',
           latency: '188.5 ms',
           desc: 'Harness streams fragmented conversation.m4a directly to Cloudflare R2 bucket',
@@ -275,6 +300,7 @@
           source: 'harness',
           target: 'session',
           protocol: 'REST',
+          label: 'Notify Done',
           method: 'PATCH /sessions/842a1/audio_recorded',
           latency: '9.8 ms',
           desc: 'Session Service records R2 asset key and generates 2-hour presigned playback URL',
@@ -290,6 +316,7 @@
           source: 'session',
           target: 'postgres',
           protocol: 'Postgres',
+          label: 'Save Outbox',
           method: 'INSERT INTO session.outbox',
           latency: '4.5 ms',
           desc: 'Spring Modulith writes session.completed.v1 event into transactional outbox table',
@@ -299,6 +326,7 @@
           source: 'session',
           target: 'rabbitmq',
           protocol: 'AMQP',
+          label: 'Publish Event',
           method: 'BASIC_PUBLISH exchange=topic.session',
           latency: '8.2 ms',
           desc: 'Transactional outbox poller publishes event to RabbitMQ topic exchange',
@@ -308,6 +336,7 @@
           source: 'rabbitmq',
           target: 'class',
           protocol: 'AMQP',
+          label: 'Class Sync',
           method: 'AMQP Deliver (queue=class.sync)',
           latency: '6.4 ms',
           desc: 'RabbitMQ fans out event to Service-Class for student grading & level-up progression',
@@ -317,6 +346,7 @@
           source: 'rabbitmq',
           target: 'notification',
           protocol: 'AMQP',
+          label: 'Push Alert',
           method: 'AMQP Deliver (queue=notification.push)',
           latency: '7.1 ms',
           desc: 'RabbitMQ fans out event to Service-Notification to send student push alert & email',
@@ -326,6 +356,7 @@
           source: 'class',
           target: 'rabbitmq',
           protocol: 'AMQP',
+          label: 'Event ACK',
           method: 'BASIC_ACK',
           latency: '2.0 ms',
           desc: 'Consumer microservices confirm message ACK, ensuring at-least-once delivery',
@@ -396,15 +427,19 @@
       this._activeMvcTimeouts = [];
     }
 
-    generateSquaredPath(x1, y1, x2, y2, yMid) {
+    generateSquaredPath(x1, y1, x2, y2, mid, orientation = 'vertical') {
       if (y1 === y2) {
         return `M ${x1} ${y1} L ${x2} ${y2}`;
       }
       if (x1 === x2) {
         return `M ${x1} ${y1} L ${x2} ${y2}`;
       }
-      const mid = typeof yMid === 'number' ? yMid : Math.round((y1 + y2) / 2);
-      return `M ${x1} ${y1} L ${x1} ${mid} L ${x2} ${mid} L ${x2} ${y2}`;
+      if (orientation === 'horizontal') {
+        const xMid = typeof mid === 'number' ? mid : Math.round((x1 + x2) / 2);
+        return `M ${x1} ${y1} L ${xMid} ${y1} L ${xMid} ${y2} L ${x2} ${y2}`;
+      }
+      const yMid = typeof mid === 'number' ? mid : Math.round((y1 + y2) / 2);
+      return `M ${x1} ${y1} L ${x1} ${yMid} L ${x2} ${yMid} L ${x2} ${y2}`;
     }
 
     getShortProtocolLabel(step) {
@@ -703,7 +738,7 @@
       const s = srcEl.getBoundingClientRect();
       const t = tgtEl.getBoundingClientRect();
 
-      let x1, y1, x2, y2, yMid;
+      let x1, y1, x2, y2, mid, orientation = 'vertical';
 
       // 1. Direct Horizontal Left-to-Right Pairs
       if (
@@ -720,7 +755,8 @@
         y1 = Math.round(s.top + s.height / 2 - gRect.top);
         x2 = Math.round(t.left - gRect.left);
         y2 = Math.round(t.top + t.height / 2 - gRect.top);
-        yMid = y1;
+        mid = Math.round((x1 + x2) / 2);
+        orientation = 'horizontal';
       }
       // 2. Direct Vertical Upward Pairs (APISIX -> IAM)
       else if (srcId === 'apisix' && tgtId === 'iam') {
@@ -728,7 +764,8 @@
         y1 = Math.round(s.top - gRect.top);
         x2 = Math.round(t.left + t.width / 2 - gRect.left);
         y2 = Math.round(t.bottom - gRect.top);
-        yMid = Math.round((y1 + y2) / 2);
+        mid = Math.round((y1 + y2) / 2);
+        orientation = 'vertical';
       }
       // 3. Direct Vertical Downward Pairs (Session -> Harness, Decision -> LLM)
       else if (
@@ -739,17 +776,28 @@
         y1 = Math.round(s.bottom - gRect.top);
         x2 = Math.round(t.left + t.width / 2 - gRect.left);
         y2 = Math.round(t.top - gRect.top);
-        yMid = Math.round((y1 + y2) / 2);
+        mid = Math.round((y1 + y2) / 2);
+        orientation = 'vertical';
       }
-      // 4. Gateway Fan-Out to Microservices (Rightwards)
+      // 4. Gateway to Harness (Rightward/Downward into Corridor)
+      else if (srcId === 'apisix' && tgtId === 'harness') {
+        x1 = Math.round(s.right - gRect.left);
+        y1 = Math.round(s.bottom - s.height / 4 - gRect.top);
+        x2 = Math.round(t.left - gRect.left);
+        y2 = Math.round(t.top + t.height / 2 - gRect.top);
+        mid = Math.round((x1 + x2) / 2);
+        orientation = 'horizontal';
+      }
+      // 5. Gateway Fan-Out to Microservices (Rightwards)
       else if (srcId === 'apisix') {
         x1 = Math.round(s.right - gRect.left);
         y1 = Math.round(s.top + s.height / 2 - gRect.top);
         x2 = Math.round(t.left - gRect.left);
         y2 = Math.round(t.top + t.height / 2 - gRect.top);
-        yMid = Math.round((y1 + y2) / 2);
+        mid = Math.round((x1 + x2) / 2);
+        orientation = 'horizontal';
       }
-      // 5. Harness down to AI Inference Cluster (STT, Decision, TTS)
+      // 6. Harness down to AI Inference Cluster (STT, Decision, TTS)
       else if (srcId === 'harness' && (tgtId === 'ai-voice' || tgtId === 'laya' || tgtId === 'tts')) {
         let anchorRatio = 0.5;
         if (tgtId === 'ai-voice') anchorRatio = 0.25;
@@ -759,18 +807,20 @@
         y1 = Math.round(s.bottom - gRect.top);
         x2 = Math.round(t.left + t.width / 2 - gRect.left);
         y2 = Math.round(t.top - gRect.top);
-        yMid = Math.round((y1 + y2) / 2);
+        mid = Math.round((y1 + y2) / 2);
+        orientation = 'vertical';
       }
-      // 6. Generic Fallback
+      // 7. Generic Fallback
       else {
         x1 = Math.round(s.left + s.width / 2 - gRect.left);
         y1 = Math.round(s.top + s.height / 2 - gRect.top);
         x2 = Math.round(t.left + t.width / 2 - gRect.left);
         y2 = Math.round(t.top + t.height / 2 - gRect.top);
-        yMid = Math.round((y1 + y2) / 2);
+        mid = Math.round((y1 + y2) / 2);
+        orientation = 'vertical';
       }
 
-      return { x1, y1, x2, y2, yMid };
+      return { x1, y1, x2, y2, yMid: mid, mid, orientation };
     }
 
     emitPacket(srcId, tgtId, colorClass, label) {
@@ -787,7 +837,7 @@
       const coords = this.computePathCoordinates(srcId, tgtId, gridRect);
       if (!coords) return;
 
-      const pathD = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.yMid);
+      const pathD = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.mid ?? coords.yMid, coords.orientation);
 
       let packetClass = 'packet-dot';
       let fillColor = '#38bdf8';
@@ -824,12 +874,12 @@
         const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
         const step = currentCase?.steps?.[this.state.stepIndex];
         if (step) {
-          shortLabel = this.getShortProtocolLabel(step);
+          shortLabel = step.label || this.getShortProtocolLabel(step);
         }
       }
 
       if (shortLabel) {
-        const textWidth = Math.max(18, Math.round(shortLabel.length * 6.2));
+        const textWidth = Math.max(20, Math.round(shortLabel.length * 6.0));
         const pillWidth = textWidth + 8;
 
         const pill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
@@ -1059,8 +1109,9 @@
         path.setAttribute('data-id-alt', `path-${tgtId}-${srcId}`);
         path.setAttribute('class', 'arch-path');
 
-        const d = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.yMid);
+        const d = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.mid ?? coords.yMid, coords.orientation);
         path.setAttribute('d', d);
+        path.setAttribute('marker-start', 'url(#arrow-default-start)');
         path.setAttribute('marker-end', 'url(#arrow-default)');
 
         svgGroup.appendChild(path);
@@ -1072,6 +1123,7 @@
 
       document.querySelectorAll('.arch-path').forEach((p) => {
         p.classList.remove('arch-path-active', 'arch-path-purple', 'arch-path-orange', 'arch-path-emerald');
+        p.setAttribute('marker-start', 'url(#arrow-default-start)');
         p.setAttribute('marker-end', 'url(#arrow-default)');
       });
 
@@ -1085,11 +1137,18 @@
         path.classList.add('arch-path-active');
         if (colorClass === 'node-active-purple') {
           path.classList.add('arch-path-purple');
+          path.setAttribute('marker-start', 'url(#arrow-purple-start)');
           path.setAttribute('marker-end', 'url(#arrow-purple)');
         } else if (colorClass === 'node-active-amber') {
           path.classList.add('arch-path-orange');
+          path.setAttribute('marker-start', 'url(#arrow-orange-start)');
           path.setAttribute('marker-end', 'url(#arrow-orange)');
+        } else if (colorClass === 'node-active-emerald') {
+          path.classList.add('arch-path-emerald');
+          path.setAttribute('marker-start', 'url(#arrow-emerald-start)');
+          path.setAttribute('marker-end', 'url(#arrow-emerald)');
         } else {
+          path.setAttribute('marker-start', 'url(#arrow-start)');
           path.setAttribute('marker-end', 'url(#arrow)');
         }
       }
