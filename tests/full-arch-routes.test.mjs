@@ -125,3 +125,27 @@ test('findLabelPlacement places label pill in open space along the route', () =>
   assert.equal(placement.pill.right, 705);
 });
 
+test('findPath finds shortest path over ROUTES adjacency', () => {
+  const R = load();
+  assert.equal(typeof R.findPath, 'function', 'exports findPath');
+
+  // Direct neighbours
+  assert.deepEqual(R.findPath('web-client', 'reverse-proxy'), ['web-client', 'reverse-proxy']);
+  assert.deepEqual(R.findPath('reverse-proxy', 'web-client'), ['reverse-proxy', 'web-client']);
+  assert.deepEqual(R.findPath('harness', 'redis'), ['harness', 'redis']);
+
+  // Multi-hop through apisix
+  assert.deepEqual(R.findPath('web-client', 'harness'), ['web-client', 'reverse-proxy', 'apisix', 'harness']);
+  assert.deepEqual(R.findPath('harness', 'web-client'), ['harness', 'apisix', 'reverse-proxy', 'web-client']);
+  assert.deepEqual(R.findPath('session', 'web-client'), ['session', 'apisix', 'reverse-proxy', 'web-client']);
+  assert.deepEqual(R.findPath('harness', 'agent'), ['harness', 'apisix', 'agent']);
+
+  // Same node
+  assert.deepEqual(R.findPath('harness', 'harness'), ['harness']);
+
+  // Unreachable returns null
+  assert.equal(R.findPath('harness', 'nonexistent'), null);
+  assert.equal(R.findPath('unknown-a', 'unknown-b'), null);
+  assert.equal(R.findPath(null, 'harness'), null);
+});
+

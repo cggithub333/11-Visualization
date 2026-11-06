@@ -58,6 +58,12 @@
           desc: 'Service-Session asks the Harness to create the turn state machine and audio buffer',
           payload: '{"sessionId": "sess_842a1", "mode": "VOICE_INTERACTIVE", "targetTurns": 8}',
           response: { label: 'Room Ready', latency: '3.3 ms', desc: 'Harness confirms the voice room is ready for audio', payload: '{"room": "ready", "seat": "leased"}' }
+        },
+        {
+          source: 'session', target: 'web-client', via: ['apisix', 'reverse-proxy'], isResponse: true, protocol: 'HTTPS', label: 'Session Ready',
+          method: '200 OK /sessions', latency: '1.4 ms',
+          desc: 'Service-Session confirms session initialization with sessionId back to the browser',
+          payload: '{"sessionId": "sess_842a1", "status": "ACTIVE", "room": "ready"}'
         }
       ]
     },
@@ -119,7 +125,7 @@
           response: { label: 'Audio Ready', latency: '6.0 ms', desc: 'TTS Server returns the synthesized audio stream', payload: '{"durationMs": 3200, "bytes": 16384}' }
         },
         {
-          source: 'harness', target: 'web-client', via: ['apisix', 'reverse-proxy'], protocol: 'WebSocket', label: 'Audio Return',
+          source: 'harness', target: 'web-client', via: ['apisix', 'reverse-proxy'], isResponse: true, protocol: 'WebSocket', label: 'Audio Reply',
           method: 'WS bot_audio_chunk', latency: '12.2 ms',
           desc: 'Synthesized voice streams back through the gateway to the student browser',
           payload: '{"event": "audio_playback", "bytes": 16384, "turnIndex": 3}'
@@ -177,6 +183,13 @@
           desc: 'Decision Server asks the LLM Server for a smooth transitional bridge sentence',
           payload: '{"tokens": 38, "mode": "bridge"}',
           response: { label: 'Bridge Text', latency: '6.0 ms', desc: 'LLM Server returns the bridge sentence', payload: '{"bridge": "Speaking of vehicles, how effective is the subway system in your city?"}' }
+        },
+        {
+          source: 'laya', target: 'harness', protocol: 'HTTP', label: 'Directive Ready',
+          method: 'POST /directive/apply', latency: '4.2 ms',
+          desc: 'Decision Server delivers the generated bridge prompt back to the Harness',
+          payload: '{"directive": "[BRIDGE: validate_then_pivot]", "bridge": "Speaking of vehicles, how effective is the subway system in your city?"}',
+          response: { label: 'Directive Ack', latency: '1.2 ms', desc: 'Harness acknowledges the transition bridge and updates active turn context', payload: '{"status": "CONTEXT_UPDATED"}' }
         }
       ]
     },
@@ -216,6 +229,12 @@
           desc: 'Harness tells Service-Session where the recording lives',
           payload: '{"audioRecorded": true, "r2Key": "sessions/sess_842a1/conversation.m4a", "ttl": 7200}',
           response: { label: 'Audio Linked', latency: '4.2 ms', desc: 'Service-Session stores the key and returns a presigned playback URL', payload: '{"playbackUrl": "presigned", "ttl": 7200}' }
+        },
+        {
+          source: 'harness', target: 'web-client', via: ['apisix', 'reverse-proxy'], isResponse: true, protocol: 'WebSocket', label: 'Session Complete',
+          method: 'WS session_complete_ack', latency: '2.8 ms',
+          desc: 'Harness delivers session completion confirmation and presigned playback URL to the student browser',
+          payload: '{"event": "SESSION_COMPLETED", "playbackUrl": "https://storage.espp/sessions/sess_842a1/conversation.m4a", "durationSec": 184}'
         }
       ]
     },

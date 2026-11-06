@@ -68,3 +68,65 @@ test('legacy assertions still hold: Agent over gRPC, R2 upload payload, AMQP pub
   const c5 = SCENARIOS[4].steps.find((s) => s.target === 'rabbitmq');
   assert.equal(c5.protocol, 'AMQP');
 });
+
+test('every non-AMQP flow from web-client ends back at web-client via apisix and reverse-proxy', () => {
+  for (const sc of SCENARIOS) {
+    if (sc.id === 'case-5') continue; // AMQP broker event fan-out does not start at web-client
+    if (sc.steps[0].source === 'web-client') {
+      const lastStep = sc.steps[sc.steps.length - 1];
+      assert.equal(lastStep.target, 'web-client', `${sc.id} last step target must be web-client`);
+      assert.deepEqual(lastStep.via, ['apisix', 'reverse-proxy'], `${sc.id} must retrace via apisix and reverse-proxy`);
+    }
+  }
+});
+
+test('isolated-node steps have responses and new return steps exist', () => {
+  const isolated = new Set(['db-class', 'db-curriculum', 'db-agent', 'postgres', 'redis', 'iam', 'cloudflare-r2', 'ai-voice', 'laya', 'tts', 'vllm']);
+  for (const sc of SCENARIOS) {
+    sc.steps.forEach((st, i) => {
+      if (isolated.has(st.target)) {
+        assert.ok(st.response, `${sc.id} step ${i + 1} (${st.source}->${st.target}) must have a response`);
+      }
+    });
+  }
+
+  // Case 1 final return step
+  const c1Final = SCENARIOS[0].steps[SCENARIOS[0].steps.length - 1];
+  assert.equal(c1Final.source, 'session');
+  assert.equal(c1Final.target, 'web-client');
+  assert.deepEqual(c1Final.via, ['apisix', 'reverse-proxy']);
+  assert.equal(c1Final.isResponse, true);
+
+  // Case 2 Audio Reply step
+  const c2Final = SCENARIOS[1].steps[SCENARIOS[1].steps.length - 1];
+  assert.equal(c2Final.source, 'harness');
+  assert.equal(c2Final.target, 'web-client');
+  assert.deepEqual(c2Final.via, ['apisix', 'reverse-proxy']);
+  assert.equal(c2Final.label, 'Audio Reply');
+  assert.equal(c2Final.isResponse, true);
+
+  // Case 3 Directive Ready / bridge return step
+  const c3Final = SCENARIOS[2].steps[SCENARIOS[2].steps.length - 1];
+  assert.equal(c3Final.source, 'laya');
+  assert.equal(c3Final.target, 'harness');
+
+  // Case 4 final return step
+  const c4Final = SCENARIOS[3].steps[SCENARIOS[3].steps.length - 1];
+  assert.equal(c4Final.source, 'harness');
+  assert.equal(c4Final.target, 'web-client');
+  assert.deepEqual(c4Final.via, ['apisix', 'reverse-proxy']);
+  assert.equal(c4Final.isResponse, true);
+});
+
+test('all scenario payloads are valid JSON', () => {
+  for (const sc of SCENARIOS) {
+    for (const st of sc.steps) {
+      if (st.payload) {
+        assert.doesNotThrow(() => JSON.parse(st.payload), `${sc.id} ${st.label} payload is not valid JSON`);
+      }
+      if (st.response?.payload) {
+        assert.doesNotThrow(() => JSON.parse(st.response.payload), `${sc.id} ${st.label} response payload is not valid JSON`);
+      }
+    }
+  }
+});

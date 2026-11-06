@@ -65,3 +65,31 @@ test('stylesheet styles response packets distinctly', () => {
   const css = fs.readFileSync(path.join(ROOT, 'src/diagrams/full-architecture/styles.css'), 'utf8');
   assert.ok(css.includes('.moving-packet-response'));
 });
+
+test('getHops fills gaps between non-adjacent hops using Routes.findPath', async () => {
+  const sim = await makeSim();
+  // Missing via completely between distant nodes:
+  assert.deepEqual(sim.getHops({ source: 'harness', target: 'web-client' }),
+    ['harness', 'apisix', 'reverse-proxy', 'web-client']);
+  assert.deepEqual(sim.getHops({ source: 'web-client', target: 'session' }),
+    ['web-client', 'reverse-proxy', 'apisix', 'session']);
+  // Partial via list with a gap:
+  assert.deepEqual(sim.getHops({ source: 'web-client', target: 'harness', via: ['reverse-proxy'] }),
+    ['web-client', 'reverse-proxy', 'apisix', 'harness']);
+  // Explicit via list still takes precedence:
+  assert.deepEqual(sim.getHops({ source: 'web-client', target: 'harness', via: ['reverse-proxy', 'apisix'] }),
+    ['web-client', 'reverse-proxy', 'apisix', 'harness']);
+});
+
+test('engine exposes clearHighlightedPaths and emitSelfLoopVisual for hop and self-loop handling', async () => {
+  const sim = await makeSim();
+  assert.equal(typeof sim.clearHighlightedPaths, 'function', 'has clearHighlightedPaths');
+  assert.equal(typeof sim.emitSelfLoopVisual, 'function', 'has emitSelfLoopVisual');
+  const selfStepWithResp = {
+    source: 'harness',
+    target: 'harness',
+    label: 'Context Check',
+    response: { label: 'Check Done', latency: '1.0 ms', desc: 'FSM ok', payload: '{}' }
+  };
+  await sim.playStep(selfStepWithResp, 'node-active-purple');
+});

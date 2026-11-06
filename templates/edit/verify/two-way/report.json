@@ -3,7 +3,7 @@
   "topology": [],
   "cases": {
     "case-1": {
-      "expected": 12,
+      "expected": 13,
       "seen": [
         "Init Session",
         "Edge Ack",
@@ -16,7 +16,8 @@
         "Store Session",
         "Row Saved",
         "Init Voice Room",
-        "Room Ready"
+        "Room Ready",
+        "Session Ready"
       ],
       "missing": []
     },
@@ -35,13 +36,14 @@
         "Teacher Reply",
         "Voice Synthesize",
         "Audio Ready",
-        "Audio Return"
+        "Audio Reply"
       ],
       "missing": []
     },
     "case-3": {
-      "expected": 12,
+      "expected": 15,
       "seen": [
+        "Context Check",
         "Fetch Persona",
         "Persona Config",
         "Load Persona",
@@ -53,20 +55,23 @@
         "Decision Inject",
         "Directive Ack",
         "Bridge Prompt",
-        "Bridge Text"
+        "Bridge Text",
+        "Directive Ready"
       ],
       "missing": []
     },
     "case-4": {
-      "expected": 7,
+      "expected": 9,
       "seen": [
         "Finish Session",
         "Drain Buffer",
         "Audio Chunks",
+        "Mux AAC->M4A",
         "Upload R2",
         "Object Stored",
         "Notify Done",
-        "Audio Linked"
+        "Audio Linked",
+        "Session Complete"
       ],
       "missing": []
     },
@@ -83,5 +88,6 @@
       "missing": []
     }
   },
+  "idleHighlights": [],
   "failures": []
 }

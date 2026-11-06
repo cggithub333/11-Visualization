@@ -62,8 +62,34 @@
     }
 
     getHops(step) {
-      return [step.source, ...(step.via || []), step.target]
+      if (!step) return [];
+      const anchors = [step.source, ...(step.via || []), step.target]
         .filter((id, i, arr) => i === 0 || id !== arr[i - 1]);
+
+      if (anchors.length <= 1) return anchors;
+
+      const hops = [anchors[0]];
+      for (let i = 0; i < anchors.length - 1; i++) {
+        const u = anchors[i];
+        const v = anchors[i + 1];
+        if (u === v) continue;
+        const direct = Routes && typeof Routes.findRoute === 'function' ? Routes.findRoute(u, v) : null;
+        if (direct) {
+          hops.push(v);
+        } else if (Routes && typeof Routes.findPath === 'function') {
+          const path = Routes.findPath(u, v);
+          if (path && path.length > 1) {
+            for (let j = 1; j < path.length; j++) {
+              hops.push(path[j]);
+            }
+          } else {
+            hops.push(v);
+          }
+        } else {
+          hops.push(v);
+        }
+      }
+      return hops.filter((id, i, arr) => i === 0 || id !== arr[i - 1]);
     }
 
     getRoute(srcId, tgtId, gRect) {
@@ -133,6 +159,9 @@
             this.toggleZoom();
           }
         } catch (e) {}
+      }
+      if (typeof window !== 'undefined') {
+        window.fullArchSim = this;
       }
       this.drawConnectionPaths();
       this.renderCurrentState();
@@ -294,7 +323,8 @@
     }
 
     renderResponsePhase(step) {
-      if (this.headless || typeof document === 'undefined' || !step.response) return;
+      if (this.headless || typeof document === 'undefined' || (!step.response && !step.isResponse)) return;
+      const resp = step.response || step;
       const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
       const caseLabel = document.getElementById('telemetry-case-label');
       const descLabel = document.getElementById('telemetry-desc-label');
@@ -302,25 +332,111 @@
       const protoEl = document.getElementById('metric-protocol');
       const latencyEl = document.getElementById('metric-latency');
       if (caseLabel) caseLabel.textContent = `${currentCase.title.toUpperCase()} · STEP ${this.state.stepIndex + 1}/${currentCase.steps.length} · RESPONSE`;
-      if (descLabel) descLabel.textContent = step.response.desc;
-      if (payloadEl) payloadEl.textContent = step.response.payload;
+      if (descLabel) descLabel.textContent = resp.desc || step.desc;
+      if (payloadEl) payloadEl.textContent = resp.payload || step.payload;
       if (protoEl) protoEl.textContent = `${step.protocol} (response)`;
-      if (latencyEl) latencyEl.textContent = step.response.latency;
+      if (latencyEl) latencyEl.textContent = resp.latency || step.latency;
+    }
+
+    emitSelfLoopVisual(nodeId, label, colorClass) {
+      if (this.headless || typeof document === 'undefined') return;
+      const packetsGroup = document.getElementById('svg-packets-group');
+      const grid = document.getElementById('full-arch-grid');
+      const nodeEl = document.getElementById(`node-${nodeId}`);
+      if (!packetsGroup || !grid || !nodeEl) return;
+
+      const gridRect = grid.getBoundingClientRect();
+      const nodeRect = nodeEl.getBoundingClientRect();
+      const nx = nodeRect.left - gridRect.left;
+      const ny = nodeRect.top - gridRect.top;
+      const nw = nodeRect.width;
+      const nh = nodeRect.height;
+
+      let strokeColor = '#38bdf8';
+      let ringClass = 'self-loop-ring';
+      if (colorClass === 'node-active-purple') {
+        strokeColor = '#c084fc';
+        ringClass = 'self-loop-ring ring-purple';
+      } else if (colorClass === 'node-active-amber') {
+        strokeColor = '#fb923c';
+        ringClass = 'self-loop-ring ring-orange';
+      } else if (colorClass === 'node-active-emerald') {
+        strokeColor = '#34d399';
+        ringClass = 'self-loop-ring ring-emerald';
+      }
+
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.setAttribute('class', 'moving-packet moving-self-loop');
+      group.setAttribute('style', `color: ${strokeColor}`);
+
+      const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      rect.setAttribute('x', String(nx - 4));
+      rect.setAttribute('y', String(ny - 4));
+      rect.setAttribute('width', String(nw + 8));
+      rect.setAttribute('height', String(nh + 8));
+      rect.setAttribute('rx', '8');
+      rect.setAttribute('ry', '8');
+      rect.setAttribute('fill', 'none');
+      rect.setAttribute('stroke', strokeColor);
+      rect.setAttribute('stroke-width', '2');
+      rect.setAttribute('stroke-dasharray', '4 3');
+      rect.setAttribute('class', ringClass);
+      group.appendChild(rect);
+
+      const shortLabel = label || 'IN-PLACE';
+      const textWidth = Math.max(20, Math.round(shortLabel.length * 6.0));
+      const pillWidth = textWidth + 12;
+      const pillHeight = 15;
+      const px = nx + nw / 2 - pillWidth / 2;
+      const py = ny - 18;
+
+      const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      labelGroup.setAttribute('class', 'packet-label-group');
+
+      const pill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      pill.setAttribute('class', 'packet-label-pill');
+      pill.setAttribute('x', String(Math.round(px)));
+      pill.setAttribute('y', String(Math.round(py)));
+      pill.setAttribute('width', String(pillWidth));
+      pill.setAttribute('height', String(pillHeight));
+      pill.setAttribute('rx', '3');
+      pill.setAttribute('ry', '3');
+      labelGroup.appendChild(pill);
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('class', 'packet-label-text');
+      text.setAttribute('x', String(Math.round(px + pillWidth / 2)));
+      text.setAttribute('y', String(Math.round(py + 10.5)));
+      text.textContent = shortLabel;
+      labelGroup.appendChild(text);
+
+      group.appendChild(labelGroup);
+      packetsGroup.appendChild(group);
+
+      setTimeout(() => {
+        try { group.remove(); } catch (e) {}
+      }, 1200);
     }
 
     async playStep(step, highlightClass) {
       if (this.headless || typeof document === 'undefined' || !step) return;
       const token = this._playToken;
       const hops = this.getHops(step);
+      const isRespStep = Boolean(step.isResponse);
+
+      if (isRespStep) {
+        this.renderResponsePhase(step);
+      }
 
       if (hops.length === 1) {
         this.pulseNode(hops[0]);
+        this.emitSelfLoopVisual(hops[0], step.label, highlightClass);
         await this.sleep(HOP_MS);
         if (token !== this._playToken) return;
       } else {
         for (let i = 0; i < hops.length - 1; i++) {
-          this.highlightPath(hops[i], hops[i + 1], highlightClass);
-          this.emitPacket(hops[i], hops[i + 1], highlightClass, step.label);
+          this.highlightPath(hops[i], hops[i + 1], highlightClass, true);
+          this.emitPacket(hops[i], hops[i + 1], highlightClass, step.label, isRespStep);
           await this.sleep(HOP_MS);
           if (token !== this._playToken) return;
           this.pulseNode(hops[i + 1]);
@@ -331,11 +447,12 @@
       this.renderResponsePhase(step);
       if (hops.length === 1) {
         this.pulseNode(hops[0]);
+        this.emitSelfLoopVisual(hops[0], step.response.label, highlightClass);
         await this.sleep(HOP_MS);
         if (token !== this._playToken) return;
       } else {
         for (let i = hops.length - 1; i > 0; i--) {
-          this.highlightPath(hops[i], hops[i - 1], highlightClass);
+          this.highlightPath(hops[i], hops[i - 1], highlightClass, true);
           this.emitPacket(hops[i], hops[i - 1], highlightClass, step.response.label, true);
           await this.sleep(HOP_MS);
           if (token !== this._playToken) return;
@@ -706,10 +823,15 @@
       const protoEl = document.getElementById('metric-protocol');
       const latencyEl = document.getElementById('metric-latency');
 
-      if (caseLabel) caseLabel.textContent = `${currentCase.title.toUpperCase()} · STEP ${this.state.stepIndex + 1}/${currentCase.steps.length}`;
+      const isRespStep = Boolean(step.isResponse);
+      if (caseLabel) {
+        caseLabel.textContent = isRespStep
+          ? `${currentCase.title.toUpperCase()} · STEP ${this.state.stepIndex + 1}/${currentCase.steps.length} · RESPONSE`
+          : `${currentCase.title.toUpperCase()} · STEP ${this.state.stepIndex + 1}/${currentCase.steps.length}`;
+      }
       if (descLabel) descLabel.textContent = step.desc;
       if (payloadEl) payloadEl.textContent = step.payload;
-      if (protoEl) protoEl.textContent = step.protocol;
+      if (protoEl) protoEl.textContent = isRespStep ? `${step.protocol} (response)` : step.protocol;
       if (latencyEl) latencyEl.textContent = step.latency;
 
       const audioLabel = document.getElementById('label-audio-chunks');
@@ -733,17 +855,22 @@
         node.classList.remove('node-active-amber', 'node-active-emerald', 'node-active-purple', 'node-active-cyan', 'node-active-blue');
       });
 
-      const srcNode = document.getElementById(`node-${step.source}`);
-      const tgtNode = document.getElementById(`node-${step.target}`);
-
       const highlightClass = this.state.activeCaseId === 'case-3'
         ? 'node-active-purple'
         : (this.state.activeCaseId === 'case-4' ? 'node-active-amber' : 'node-active-cyan');
 
-      if (srcNode) srcNode.classList.add(highlightClass);
-      if (tgtNode) tgtNode.classList.add(highlightClass);
+      this.clearHighlightedPaths();
+      const hops = this.getHops(step);
+      hops.forEach((nodeId) => {
+        const el = document.getElementById(`node-${nodeId}`);
+        if (el) el.classList.add(highlightClass);
+      });
 
-      this.highlightPath(step.source, step.target, highlightClass);
+      if (hops.length > 1) {
+        for (let i = 0; i < hops.length - 1; i++) {
+          this.highlightPath(hops[i], hops[i + 1], highlightClass, true);
+        }
+      }
     }
 
     drawConnectionPaths() {
@@ -799,7 +926,7 @@
       });
     }
 
-    highlightPath(srcId, tgtId, colorClass) {
+    clearHighlightedPaths() {
       if (this.headless || typeof document === 'undefined') return;
 
       document.querySelectorAll('.arch-path').forEach((p) => {
@@ -807,7 +934,7 @@
         const conn = p.getAttribute('data-connection');
         if (conn) {
           const [a, b] = conn.split('-');
-          const rObj = Routes.findRoute(a, b)?.route;
+          const rObj = Routes && typeof Routes.findRoute === 'function' ? Routes.findRoute(a, b)?.route : null;
           if (rObj?.bus) {
             if (rObj.dir === 'publish') {
               p.removeAttribute('marker-start');
@@ -828,6 +955,14 @@
           p.setAttribute('marker-end', 'url(#arrow-default)');
         }
       });
+    }
+
+    highlightPath(srcId, tgtId, colorClass, preserveExisting = false) {
+      if (this.headless || typeof document === 'undefined') return;
+
+      if (!preserveExisting) {
+        this.clearHighlightedPaths();
+      }
 
       let path = document.getElementById(`path-${srcId}-${tgtId}`) ||
                  document.getElementById(`path-${tgtId}-${srcId}`) ||

@@ -88,16 +88,82 @@ report.topology = await page.evaluate(() => {
   return out;
 });
 report.topology.forEach((v) => failures.push(`topology: ${v}`));
+
+// 2b. Idle-state highlight: for EVERY step of all 5 scenarios, every hop route must be lit
+report.idleHighlights = await page.evaluate(() => {
+  const sim = window.fullArchSim;
+  const S = window.FullArchScenarios.SCENARIOS;
+  const violations = [];
+  for (const sc of S) {
+    sim.setCase(sc.id);
+    for (let sIdx = 0; sIdx < sc.steps.length; sIdx++) {
+      sim.state.stepIndex = sIdx;
+      sim.renderCurrentState();
+      const step = sc.steps[sIdx];
+      const hops = sim.getHops(step);
+      if (hops.length > 1) {
+        for (let i = 0; i < hops.length - 1; i++) {
+          const u = hops[i];
+          const v = hops[i + 1];
+          const pathEl = document.getElementById(`path-${u}-${v}`) ||
+                         document.getElementById(`path-${v}-${u}`) ||
+                         document.querySelector(`[data-id-alt="path-${u}-${v}"]`) ||
+                         document.querySelector(`[data-connection="${u}-${v}"]`) ||
+                         document.querySelector(`[data-connection="${v}-${u}"]`);
+          if (!pathEl || !pathEl.classList.contains('arch-path-active')) {
+            violations.push(`${sc.id} step ${sIdx + 1} (${step.label}): hop ${u}->${v} not highlighted in idle state`);
+          }
+        }
+      }
+    }
+  }
+  sim.setCase('case-1');
+  sim.state.stepIndex = 0;
+  sim.renderCurrentState();
+  return violations;
+});
+report.idleHighlights.forEach((v) => failures.push(`idle-highlight: ${v}`));
+
 await page.screenshot({ path: path.join(OUT, 'idle-100.png') });
 await page.locator('#full-arch-grid').screenshot({ path: path.join(OUT, 'idle-grid.png') });
+
+// Instrument packet emission to trace every request and response packet
+await page.evaluate(() => {
+  window.__packetLog = [];
+  const sim = window.fullArchSim;
+  const origEmit = sim.emitPacket.bind(sim);
+  sim.emitPacket = function (srcId, tgtId, colorClass, label, isResponse = false) {
+    const drawn = document.getElementById(`path-${srcId}-${tgtId}`) ||
+                  document.getElementById(`path-${tgtId}-${srcId}`) ||
+                  document.querySelector(`[data-id-alt="path-${srcId}-${tgtId}"]`) ||
+                  document.querySelector(`[data-connection="${srcId}-${tgtId}"]`) ||
+                  document.querySelector(`[data-connection="${tgtId}-${srcId}"]`);
+    window.__packetLog.push({
+      caseId: this.state.activeCaseId,
+      stepIndex: this.state.stepIndex,
+      srcId,
+      tgtId,
+      label,
+      isResponse: Boolean(isResponse),
+      hasDrawnPath: Boolean(drawn),
+      timestamp: performance.now()
+    });
+    return origEmit(srcId, tgtId, colorClass, label, isResponse);
+  };
+});
 
 // 3. Scenarios: run each with Send Request, sample packet labels, require request AND response labels.
 const scenarios = await page.evaluate(() => window.FullArchScenarios.SCENARIOS.map((s) => ({
   id: s.id,
-  expected: s.steps.filter((st) => st.source !== st.target).flatMap((st) => [st.label, st.response?.label].filter(Boolean))
+  steps: s.steps,
+  expected: s.steps.flatMap((st) => [st.label, st.response?.label].filter(Boolean))
 })));
 
 for (const sc of scenarios) {
+  await page.evaluate((cId) => {
+    window.__packetLog = [];
+    window.fullArchSim.setCase(cId);
+  }, sc.id);
   await page.selectOption('#use-case-select', sc.id);
   await page.click('#btn-arch-send-request');
   const seen = new Set();
@@ -147,6 +213,68 @@ for (const sc of scenarios) {
   const missing = sc.expected.filter((l) => !seen.has(l));
   report.cases[sc.id] = { expected: sc.expected.length, seen: [...seen], missing };
   missing.forEach((l) => failures.push(`${sc.id}: packet label never seen: ${l}`));
+
+  // Assertions on packet trace for this scenario:
+  const scPackets = await page.evaluate(() => window.__packetLog);
+
+  // A. Every emitted packet path coincides with a drawn route polyline (no empty space crossings)
+  for (const pkt of scPackets) {
+    if (!pkt.hasDrawnPath) {
+      failures.push(`${sc.id} step ${pkt.stepIndex + 1}: packet ${pkt.srcId}->${pkt.tgtId} has no drawn route polyline (crossed empty space)`);
+    }
+  }
+
+  // B. Response phases retrace request hops in reverse
+  for (let sIdx = 0; sIdx < sc.steps.length; sIdx++) {
+    const step = sc.steps[sIdx];
+    if (step.response) {
+      const stepPkts = scPackets.filter((p) => p.stepIndex === sIdx);
+      const reqPkts = stepPkts.filter((p) => !p.isResponse);
+      const respPkts = stepPkts.filter((p) => p.isResponse);
+      if (!reqPkts.length) failures.push(`${sc.id} step ${sIdx + 1} (${step.label}): missing request packets`);
+      if (!respPkts.length) failures.push(`${sc.id} step ${sIdx + 1} (${step.label}): missing response packets`);
+
+      const reqHops = reqPkts.map((p) => `${p.srcId}->${p.tgtId}`);
+      const expectedRespHops = reqPkts.map((p) => `${p.tgtId}->${p.srcId}`).reverse();
+      const actualRespHops = respPkts.map((p) => `${p.srcId}->${p.tgtId}`);
+      if (JSON.stringify(actualRespHops) !== JSON.stringify(expectedRespHops)) {
+        failures.push(`${sc.id} step ${sIdx + 1} (${step.label}): response hops [${actualRespHops.join(', ')}] did not retrace request hops [${reqHops.join(', ')}] in reverse`);
+      }
+    }
+  }
+
+  // C. Case 1, 2, 4 responses reach web-client via apisix then reverse-proxy
+  if (['case-1', 'case-2', 'case-4'].includes(sc.id)) {
+    const respPkts = scPackets.filter((p) => p.isResponse);
+    if (!respPkts.length) {
+      failures.push(`${sc.id}: no response packets emitted`);
+    } else {
+      const lastHop = respPkts[respPkts.length - 1];
+      const prevHop = respPkts[respPkts.length - 2];
+      if (!lastHop || lastHop.srcId !== 'reverse-proxy' || lastHop.tgtId !== 'web-client') {
+        failures.push(`${sc.id}: final response hop must be reverse-proxy -> web-client, got ${lastHop ? `${lastHop.srcId}->${lastHop.tgtId}` : 'none'}`);
+      }
+      if (!prevHop || prevHop.srcId !== 'apisix' || prevHop.tgtId !== 'reverse-proxy') {
+        failures.push(`${sc.id}: penultimate response hop must be apisix -> reverse-proxy, got ${prevHop ? `${prevHop.srcId}->${prevHop.tgtId}` : 'none'}`);
+      }
+    }
+  }
+
+  // D. Timing assertion: play loop and sendRequest never start the next step before response phase finishes
+  for (let sIdx = 0; sIdx < sc.steps.length - 1; sIdx++) {
+    const step = sc.steps[sIdx];
+    if (step.response) {
+      const stepRespPkts = scPackets.filter((p) => p.stepIndex === sIdx && p.isResponse);
+      const nextStepPkts = scPackets.filter((p) => p.stepIndex === sIdx + 1);
+      if (stepRespPkts.length > 0 && nextStepPkts.length > 0) {
+        const lastRespTime = Math.max(...stepRespPkts.map((p) => p.timestamp));
+        const firstNextTime = Math.min(...nextStepPkts.map((p) => p.timestamp));
+        if (firstNextTime < lastRespTime) {
+          failures.push(`${sc.id}: step ${sIdx + 2} started at ${firstNextTime.toFixed(1)}ms before step ${sIdx + 1} response finished at ${lastRespTime.toFixed(1)}ms`);
+        }
+      }
+    }
+  }
 }
 
 fs.writeFileSync(path.join(OUT, 'report.json'), JSON.stringify({ ...report, failures }, null, 2));

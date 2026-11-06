@@ -72,3 +72,11 @@ test('stylesheet stretches pair rows and makes the event bus full width', () => 
   assert.ok(/\.ingress-subzone\s*\{[^}]*gap:\s*(?:7[0-9]|8[0-9])px/.test(css), 'ingress subzone has expanded gap for label pills');
 });
 
+
+test('Frontend and Redis boxes are wide enough to show their full titles', () => {
+  const css = fs.readFileSync(path.join(ROOT, 'src/diagrams/full-architecture/styles.css'), 'utf8');
+  assert.ok(/#node-web-client \{[^}]*width: 265px/.test(css), 'Frontend box is 265px wide');
+  assert.ok(/#node-redis \{[^}]*width: 240px/.test(css), 'Redis box is 240px wide');
+  const shared = css.match(/#node-db-class,[^{]*\{[^}]*\}/)[0];
+  assert.ok(!shared.includes('#node-redis'), 'Redis is split out of the shared 230px group');
+});

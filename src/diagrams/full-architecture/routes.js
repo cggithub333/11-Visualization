@@ -206,5 +206,38 @@
       : { pill: { left: fx - pillWidth / 2, top: fy - pillHeight / 2, right: fx + pillWidth / 2, bottom: fy + pillHeight / 2 }, x: fx, y: fy };
   }
 
-  return { ROUTES, findRoute, buildRoute, routeHitsRect, findLabelPlacement };
+  const ADJACENCY = {};
+  for (const r of ROUTES) {
+    if (!ADJACENCY[r.a]) ADJACENCY[r.a] = [];
+    if (!ADJACENCY[r.b]) ADJACENCY[r.b] = [];
+    if (!ADJACENCY[r.a].includes(r.b)) ADJACENCY[r.a].push(r.b);
+    if (!ADJACENCY[r.b].includes(r.a)) ADJACENCY[r.b].push(r.a);
+  }
+
+  function findPath(srcId, tgtId) {
+    if (!srcId || !tgtId || typeof srcId !== 'string' || typeof tgtId !== 'string') return null;
+    if (!ADJACENCY[srcId] || !ADJACENCY[tgtId]) return null;
+    if (srcId === tgtId) return [srcId];
+
+    const queue = [[srcId]];
+    const visited = new Set([srcId]);
+
+    while (queue.length > 0) {
+      const path = queue.shift();
+      const curr = path[path.length - 1];
+      const neighbors = ADJACENCY[curr] || [];
+      for (const next of neighbors) {
+        if (next === tgtId) {
+          return [...path, next];
+        }
+        if (!visited.has(next)) {
+          visited.add(next);
+          queue.push([...path, next]);
+        }
+      }
+    }
+    return null;
+  }
+
+  return { ROUTES, findRoute, buildRoute, routeHitsRect, findLabelPlacement, findPath };
 });
