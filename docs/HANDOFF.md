@@ -101,19 +101,15 @@ Focus: "Modular diagram plugin architecture, GitHub sync, Cloudflare Pages deplo
   - `8a64f15` — `feat(runpod): extract RunPod serverless template and simulation module` (`src/diagrams/runpod-serverless/template.js`, `src/diagrams/runpod-serverless/engine.js`, `tests/diagram-runpod.test.mjs`)
   - `4c3aead` — `feat(lexis): extract Lexis voice and LLM deep-dive diagram modules` (`src/diagrams/lexis-voice/template.js`, `src/diagrams/lexis-voice/llm-deep-dive.js`, `src/diagrams/lexis-voice/lexis-engine.js`, `tests/diagram-lexis.test.mjs`)
   - `e144b36` — `refactor(hub): add central switcher, slim index.html shell, and retire monolith` (`index.html`, `src/core/switcher.js`, `tests/hub-integration.test.mjs`, deleted `src/app.js` & `src/styles.css`)
-  - `7f2260d` — `docs(readme): document modular plugin architecture and Cloudflare Pages deployment` (`README.md`, `.gitignore`)
-  - `3419fa3` — `docs(deploy): add Cloudflare Pages archify.omnicrafts.uk deployment docs and verification test` (`docs/deployment.md`, `tests/deployment-docs.test.mjs`)
-- **Cloudflare & System Operations Executed:**
-  - Provisioned Cloudflare Pages project `archify-omnicrafts` linked to `cggithub333/11-Visualization` (`main`), triggered initial deployment (`c5ca9625-9cfb-436a-af45-059bb1780d6e`), bound custom domain `archify.omnicrafts.uk`, and created proxied DNS `CNAME` (`archify.omnicrafts.uk -> archify-omnicrafts.pages.dev`) using `[REDACTED:cloudflare-api-token]`.
-  - Deleted legacy DNS `CNAME` record `architecture.omnicrafts.uk` from the `omnicrafts.uk` zone using `[REDACTED:cloudflare-api-token]`.
-  - Updated `/etc/cloudflared/config.yml`, removed `/etc/cloudflared/config.yml.bak-20261105104502`, validated ingress rules (`cloudflared tunnel --config /etc/cloudflared/config.yml ingress validate` -> `OK`), and restarted `cloudflared.service` using `[REDACTED:sudo-password]`.
+  - `53f9eba` — `feat(full-arch): add 100% zoom view, send request batching, and internal MVC signal lifecycle`
+  - `5895a07` — `docs(verify): record live production verification screenshots for fit and 100% zoom views`
+  - `Phase 10` — `feat(full-arch): calm idle-gray subnodes, subtle circuit paths, and slower labeled packets (1.1s + protocol pills)` (`src/diagrams/full-architecture/styles.css`, `src/diagrams/full-architecture/engine.js`, `tests/diagram-full-architecture.test.mjs`)
 - `2 redactions applied.`
 
 ## Verification
 
 | Check | Command | Outcome | When |
-| :--- | :--- | :--- | :--- |
-| **Node.js Unit & Integration Suite (9 files, 40 tests)** | `node --test tests/*.test.mjs` | `PASS` (`40/40` passed, `0` failed in `~1.5s`) | Post-Phase 4 |
+| **Node.js Unit & Integration Suite (10 files, 57 tests)** | `node --test tests/*.test.mjs` | `PASS` (`57/57` passed, `0` failed in `~3.5s`) | Post-Phase 10 |
 | **Headless Chrome Visual & Runtime Parity** | `google-chrome-stable --headless --dump-dom ...` (inside `tests/hub-integration.test.mjs` & visual screenshots) | `PASS` (Zero console/page errors; verified RunPod, Lexis, vLLM, Ollama, and Adaptive Context views) | Post-Phase 4 |
 | **Live Production Custom Domain & Assets** | `curl -fsSI https://archify.omnicrafts.uk/` (plus `/src/core/switcher.js`, `/src/diagrams/runpod-serverless/engine.js`, `/src/diagrams/lexis-voice/lexis-engine.js`, `/src/diagrams/adaptive-context-switch/context-engine.js`) | `PASS` (`HTTP/2 200 OK` across all endpoints) | Post-Phase 2 / 4 |
 | **Legacy DNS Record Removal** | Cloudflare DNS API query for `architecture.omnicrafts.uk` in `omnicrafts.uk` zone | `PASS` (`legacy_architecture_dns_count=0`, `archify_dns_count=1`) | Wave 2 & Audit |

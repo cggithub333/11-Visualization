@@ -579,7 +579,7 @@
       if (this.state.timerId) clearInterval(this.state.timerId);
       this.state.timerId = setInterval(() => {
         this.stepNext();
-      }, 2200);
+      }, 2800);
       if (this.state.timerId && typeof this.state.timerId.unref === 'function') {
         this.state.timerId.unref();
       }
@@ -740,7 +740,127 @@
       });
     }
 
-    emitPacket(srcId, tgtId, colorClass) {
+    getShortProtocolLabel(step) {
+      if (!step) return '';
+      const proto = String(step.protocol || '').trim();
+      const method = String(step.method || '').trim();
+
+      if (/jwt/i.test(proto) || /jwt/i.test(method)) return 'JWT';
+      if (/websocket/i.test(proto) || /^ws\b/i.test(proto) || /^ws\b/i.test(method)) return 'WS';
+      if (/grpc/i.test(proto) || /grpc/i.test(method)) return 'gRPC';
+      if (/resp/i.test(proto)) return 'RESP';
+      if (/s3/i.test(proto) || /r2/i.test(proto)) return 'S3';
+      if (/amqp/i.test(proto)) return 'AMQP';
+      if (/postgres/i.test(proto) || /sql/i.test(proto)) return 'SQL';
+      if (/in-memory/i.test(proto) || /remux/i.test(method)) return 'REMUX';
+      if (/internal fsm/i.test(proto) || /fsm/i.test(proto)) return 'FSM';
+      if (/http\/2/i.test(proto)) return 'HTTP/2';
+      if (/https/i.test(proto)) return 'HTTPS';
+      if (/http/i.test(proto)) return 'HTTP';
+      if (/rest/i.test(proto)) return 'REST';
+
+      const token = proto.split(/[\s/]/)[0];
+      return (token.length > 8 ? token.slice(0, 8) : token) || 'DATA';
+    }
+
+    computePathCoordinates(srcId, tgtId, index = 0, gridRect = null) {
+      const grid = document.getElementById('full-arch-grid');
+      if (!grid) return null;
+      const gRect = gridRect || grid.getBoundingClientRect();
+
+      const srcEl = document.getElementById(`node-${srcId}`);
+      const tgtEl = document.getElementById(`node-${tgtId}`);
+      if (!srcEl || !tgtEl) return null;
+
+      const srcRect = srcEl.getBoundingClientRect();
+      const tgtRect = tgtEl.getBoundingClientRect();
+
+      const srcCenterX = Math.round(srcRect.left + srcRect.width / 2 - gRect.left);
+      const tgtCenterX = Math.round(tgtRect.left + tgtRect.width / 2 - gRect.left);
+
+      let x1 = srcCenterX;
+      let y1;
+      let x2 = tgtCenterX;
+      let y2;
+      let yMid;
+
+      // 1. Direct horizontal routing for Tier 1 adjacent nodes
+      if (
+        (srcId === 'web-client' && tgtId === 'apisix') ||
+        (srcId === 'iam' && tgtId === 'apisix')
+      ) {
+        if (srcId === 'web-client') {
+          x1 = Math.round(srcRect.right - gRect.left);
+          y1 = Math.round(srcRect.top + srcRect.height / 2 - gRect.top);
+          x2 = Math.round(tgtRect.left - gRect.left);
+          y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gRect.top);
+        } else {
+          x1 = Math.round(srcRect.left - gRect.left);
+          y1 = Math.round(srcRect.top + srcRect.height / 2 - gRect.top);
+          x2 = Math.round(tgtRect.right - gRect.left);
+          y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gRect.top);
+        }
+        yMid = y1;
+      }
+      // 2. Same-tier routing (across Tier 2)
+      else if (Math.abs(srcRect.top - tgtRect.top) < 35) {
+        if (tgtId === 'rabbitmq' || srcId === 'rabbitmq') {
+          // Broker fan-out: channel BELOW Tier 2 with dedicated lanes
+          y1 = Math.round(srcRect.bottom - gRect.top);
+          y2 = Math.round(tgtRect.bottom - gRect.top);
+          const lane = (index % 3) * 6;
+          yMid = Math.max(y1, y2) + 10 + lane;
+        } else {
+          // Service-to-service orchestration: channel ABOVE Tier 2 with dedicated lanes
+          y1 = Math.round(srcRect.top - gRect.top);
+          y2 = Math.round(tgtRect.top - gRect.top);
+          const lane = (index % 4) * 5;
+          yMid = Math.min(y1, y2) - 10 - lane;
+        }
+      }
+      // 3. Tier 2 <-> Tier 4 (AI Services cluster, passing Tier 3)
+      else if (
+        (srcId === 'harness' && tgtId === 'ai-voice') ||
+        (srcId === 'laya' && tgtId === 'harness') ||
+        (srcId === 'vllm' && tgtId === 'harness')
+      ) {
+        const isDownward = srcId === 'harness';
+        y1 = isDownward ? Math.round(srcRect.bottom - gRect.top) : Math.round(srcRect.top - gRect.top);
+        y2 = isDownward ? Math.round(tgtRect.top - gRect.top) : Math.round(tgtRect.bottom - gRect.top);
+
+        const tier3 = document.getElementById('tier-3');
+        const tier4 = document.getElementById('tier-4');
+        if (tier3 && tier4) {
+          const tier3Bottom = Math.round(tier3.getBoundingClientRect().bottom - gRect.top);
+          const tier4Top = Math.round(tier4.getBoundingClientRect().top - gRect.top);
+          const gutter3Mid = Math.round((tier3Bottom + tier4Top) / 2);
+          const lane = ((index % 3) - 1) * 6;
+          yMid = gutter3Mid + lane;
+        } else {
+          yMid = Math.round((y1 + y2) / 2);
+        }
+      }
+      // 4. Downward routing (Tier 1 -> Tier 2, Tier 2 -> Tier 3)
+      else if (srcRect.bottom <= tgtRect.top + 20) {
+        y1 = Math.round(srcRect.bottom - gRect.top);
+        y2 = Math.round(tgtRect.top - gRect.top);
+        const baseYMid = Math.round((y1 + y2) / 2);
+        const laneOffset = ((index % 5) - 2) * 5;
+        yMid = baseYMid + laneOffset;
+      }
+      // 5. Upward routing (Tier 3 -> Tier 2, e.g. cloudflare-r2 -> harness)
+      else {
+        y1 = Math.round(srcRect.top - gRect.top);
+        y2 = Math.round(tgtRect.bottom - gRect.top);
+        const baseYMid = Math.round((y1 + y2) / 2);
+        const laneOffset = ((index % 5) - 2) * 5;
+        yMid = baseYMid + laneOffset;
+      }
+
+      return { x1, y1, x2, y2, yMid };
+    }
+
+    emitPacket(srcId, tgtId, colorClass, label) {
       if (this.headless || typeof document === 'undefined') return;
       const packetsGroup = document.getElementById('svg-packets-group');
       const grid = document.getElementById('full-arch-grid');
@@ -754,12 +874,24 @@
       const srcRect = srcEl.getBoundingClientRect();
       const tgtRect = tgtEl.getBoundingClientRect();
 
-      const x1 = Math.round(srcRect.left + srcRect.width / 2 - gridRect.left);
-      const y1 = Math.round(srcRect.top + srcRect.height / 2 - gridRect.top);
-      const x2 = Math.round(tgtRect.left + tgtRect.width / 2 - gridRect.left);
-      const y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gridRect.top);
-      const yMid = Math.round((y1 + y2) / 2);
-      const pathD = this.generateSquaredPath(x1, y1, x2, y2, yMid);
+      let pathD = '';
+      if (srcId === tgtId) {
+        // Self-loop pulse arc above card
+        const topY = Math.round(srcRect.top - gridRect.top);
+        const midX = Math.round(srcRect.left + srcRect.width / 2 - gridRect.left);
+        pathD = `M ${midX - 25} ${topY} C ${midX - 25} ${topY - 30}, ${midX + 25} ${topY - 30}, ${midX + 25} ${topY}`;
+      } else {
+        const coords = this.computePathCoordinates(srcId, tgtId, 0, gridRect);
+        if (coords) {
+          pathD = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.yMid);
+        } else {
+          const x1 = Math.round(srcRect.left + srcRect.width / 2 - gridRect.left);
+          const y1 = Math.round(srcRect.top + srcRect.height / 2 - gridRect.top);
+          const x2 = Math.round(tgtRect.left + tgtRect.width / 2 - gridRect.left);
+          const y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gridRect.top);
+          pathD = this.generateSquaredPath(x1, y1, x2, y2, Math.round((y1 + y2) / 2));
+        }
+      }
 
       let packetClass = 'packet-dot';
       let fillColor = '#38bdf8';
@@ -774,27 +906,68 @@
         fillColor = '#34d399';
       }
 
+      // Moving packet SVG Group (Circle + Protocol Label Pill)
+      const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.setAttribute('class', 'moving-packet');
+      group.setAttribute('style', `color: ${fillColor}`);
+
+      const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
+      anim.setAttribute('path', pathD);
+      anim.setAttribute('dur', '1.1s');
+      anim.setAttribute('repeatCount', '1');
+      anim.setAttribute('fill', 'freeze');
+      group.appendChild(anim);
+
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('r', '5');
       circle.setAttribute('class', packetClass);
       circle.setAttribute('fill', fillColor);
+      group.appendChild(circle);
 
-      const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
-      anim.setAttribute('path', pathD);
-      anim.setAttribute('dur', '0.5s');
-      anim.setAttribute('repeatCount', '1');
-      anim.setAttribute('fill', 'freeze');
-      circle.appendChild(anim);
+      // Short method/protocol label pill
+      let shortLabel = label;
+      if (!shortLabel && this.state) {
+        const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
+        const step = currentCase?.steps?.[this.state.stepIndex];
+        if (step) {
+          shortLabel = this.getShortProtocolLabel(step);
+        }
+      }
 
-      packetsGroup.appendChild(circle);
+      if (shortLabel) {
+        const textWidth = Math.max(18, Math.round(shortLabel.length * 6.2));
+        const pillWidth = textWidth + 8;
+
+        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        rect.setAttribute('x', '8');
+        rect.setAttribute('y', '-12');
+        rect.setAttribute('width', String(pillWidth));
+        rect.setAttribute('height', '15');
+        rect.setAttribute('rx', '3');
+        rect.setAttribute('fill', 'rgba(15, 23, 42, 0.92)');
+        rect.setAttribute('stroke', 'currentColor');
+        rect.setAttribute('stroke-width', '1');
+        group.appendChild(rect);
+
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', '12');
+        text.setAttribute('y', '-1');
+        text.setAttribute('font-size', '9');
+        text.setAttribute('font-family', 'monospace');
+        text.setAttribute('fill', '#e2e8f0');
+        text.textContent = shortLabel;
+        group.appendChild(text);
+      }
+
+      packetsGroup.appendChild(group);
 
       if (typeof anim.beginElement === 'function') {
         try { anim.beginElement(); } catch (e) {}
       }
 
       setTimeout(() => {
-        try { circle.remove(); } catch (e) {}
-      }, 550);
+        try { group.remove(); } catch (e) {}
+      }, 1200);
     }
 
     async sendRequest(count) {
@@ -854,10 +1027,11 @@
             if (!this.state.isBatchRunning) break;
 
             // Phase 6: Controller emits packet along SVG connection path to target service
-            this.emitPacket(step.source, step.target, highlightClass);
+            const shortLabel = this.getShortProtocolLabel(step);
+            this.emitPacket(step.source, step.target, highlightClass, shortLabel);
 
-            // Packet travels to target node
-            await new Promise((r) => setTimeout(r, 450));
+            // Packet travels to target node at observable speed (1.1s transit + 100ms settling)
+            await new Promise((r) => setTimeout(r, 1200));
             if (!this.state.isBatchRunning) break;
 
             const tgtNode = document.getElementById(`node-${step.target}`);
@@ -1026,8 +1200,9 @@
         ? 'node-active-purple'
         : (this.state.activeCaseId === 'case-4' ? 'node-active-amber' : 'node-active-cyan');
 
+      const label = this.getShortProtocolLabel(step);
       this.animateServiceMvcCycle(step.source, () => {
-        this.emitPacket(step.source, step.target, highlightClass);
+        this.emitPacket(step.source, step.target, highlightClass, label);
       });
     }
 
@@ -1076,68 +1251,8 @@
       ];
 
       connections.forEach(([srcId, tgtId], index) => {
-        const srcEl = document.getElementById(`node-${srcId}`);
-        const tgtEl = document.getElementById(`node-${tgtId}`);
-        if (!srcEl || !tgtEl) return;
-
-        const srcRect = srcEl.getBoundingClientRect();
-        const tgtRect = tgtEl.getBoundingClientRect();
-
-        const srcCenterX = Math.round(srcRect.left + srcRect.width / 2 - gridRect.left);
-        const tgtCenterX = Math.round(tgtRect.left + tgtRect.width / 2 - gridRect.left);
-
-        let x1 = srcCenterX;
-        let y1;
-        let x2 = tgtCenterX;
-        let y2;
-        let yMid;
-
-        // Clean channel routing offsets to prevent line overlap
-        const channelOffset = ((index % 7) - 3) * 4;
-
-        if (
-          (srcId === 'web-client' && tgtId === 'apisix') ||
-          (srcId === 'iam' && tgtId === 'apisix')
-        ) {
-          // Direct horizontal routing for Tier 1 adjacent nodes
-          if (srcId === 'web-client') {
-            x1 = Math.round(srcRect.right - gridRect.left);
-            y1 = Math.round(srcRect.top + srcRect.height / 2 - gridRect.top);
-            x2 = Math.round(tgtRect.left - gridRect.left);
-            y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gridRect.top);
-          } else {
-            x1 = Math.round(srcRect.left - gridRect.left);
-            y1 = Math.round(srcRect.top + srcRect.height / 2 - gridRect.top);
-            x2 = Math.round(tgtRect.right - gridRect.left);
-            y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gridRect.top);
-          }
-          yMid = y1;
-        } else if (Math.abs(srcRect.top - tgtRect.top) < 35) {
-          // Same tier routing (e.g. across Tier 2)
-          if (tgtId === 'rabbitmq' || srcId === 'rabbitmq') {
-            // Broker fan-out routes through channel below Tier 2
-            y1 = Math.round(srcRect.bottom - gridRect.top);
-            y2 = Math.round(tgtRect.bottom - gridRect.top);
-            yMid = Math.max(y1, y2) + 12 + channelOffset;
-          } else {
-            // Service-to-service routes through channel above Tier 2
-            y1 = Math.round(srcRect.top - gridRect.top);
-            y2 = Math.round(tgtRect.top - gridRect.top);
-            yMid = Math.min(y1, y2) - 12 + channelOffset;
-          }
-        } else if (srcRect.bottom <= tgtRect.top + 20) {
-          // Downward routing (Tier 1 -> Tier 2, Tier 2 -> Tier 3/4)
-          y1 = Math.round(srcRect.bottom - gridRect.top);
-          y2 = Math.round(tgtRect.top - gridRect.top);
-          const baseYMid = Math.round((y1 + y2) / 2);
-          yMid = baseYMid + channelOffset;
-        } else {
-          // Upward routing (Tier 3/4 -> Tier 2)
-          y1 = Math.round(srcRect.top - gridRect.top);
-          y2 = Math.round(tgtRect.bottom - gridRect.top);
-          const baseYMid = Math.round((y1 + y2) / 2);
-          yMid = baseYMid + channelOffset;
-        }
+        const coords = this.computePathCoordinates(srcId, tgtId, index, gridRect);
+        if (!coords) return;
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('id', `path-${srcId}-${tgtId}`);
@@ -1145,7 +1260,7 @@
         path.setAttribute('data-id-alt', `path-${tgtId}-${srcId}`);
         path.setAttribute('class', 'arch-path');
 
-        const d = this.generateSquaredPath(x1, y1, x2, y2, yMid);
+        const d = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.yMid);
         path.setAttribute('d', d);
         path.setAttribute('marker-end', 'url(#arrow-default)');
         svgGroup.appendChild(path);

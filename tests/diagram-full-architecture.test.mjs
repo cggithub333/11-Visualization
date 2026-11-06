@@ -275,5 +275,57 @@ test('Headless Chrome captures visual verification screenshot for Diagram 3 Full
   assert.ok(stats.size > 20000, `Screenshot size (${stats.size} bytes) must be > 20KB`);
 });
 
+test('Headless Chrome captures visual verification screenshot for Diagram 3 Full Architecture 100% Zoom View', () => {
+  const verifyDir = path.join(ROOT, 'templates/edit/verify');
+  fs.mkdirSync(verifyDir, { recursive: true });
+  const screenshotPath = path.join(verifyDir, 'view3_100_percent_view_verified.png');
+  const fileUrl = `file://${path.join(ROOT, 'index.html')}?diagram=full-architecture&zoom=100`;
+
+  execSync(`google-chrome --headless=new --disable-gpu --window-size=1920,1080 --screenshot="${screenshotPath}" "${fileUrl}"`, {
+    timeout: 15000
+  });
+
+  assert.ok(fs.existsSync(screenshotPath), 'Screenshot view3_100_percent_view_verified.png must exist');
+  const stats = fs.statSync(screenshotPath);
+  assert.ok(stats.size > 20000, `Screenshot size (${stats.size} bytes) must be > 20KB`);
+});
+
+test('FullArchitectureSimulation correctly derives short protocol labels for labeled packet pills', async () => {
+  const mod = await import('../src/diagrams/full-architecture/engine.js');
+  const Cls = mod.FullArchitectureSimulation || mod.default?.FullArchitectureSimulation;
+  const sim = new Cls({ headless: true });
+
+  assert.equal(typeof sim.getShortProtocolLabel, 'function', 'has getShortProtocolLabel');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'JWT Bearer' }), 'JWT');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'WebSocket' }), 'WS');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'WS Proxy' }), 'WS');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'gRPC' }), 'gRPC');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'RESP' }), 'RESP');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'S3/R2' }), 'S3');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'AMQP' }), 'AMQP');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'Postgres' }), 'SQL');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'In-Memory', method: 'ffmpeg remux' }), 'REMUX');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'HTTP/2' }), 'HTTP/2');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'HTTPS' }), 'HTTPS');
+  assert.equal(sim.getShortProtocolLabel({ protocol: 'REST' }), 'REST');
+});
+
+test('Full architecture stylesheet defines calm idle gray subnodes, inactive buses, and moving packet styles', () => {
+  const cssPath = path.join(ROOT, 'src/diagrams/full-architecture/styles.css');
+  const content = fs.readFileSync(cssPath, 'utf8');
+
+  // Verify idle gray subnodes styles
+  assert.ok(content.includes('#64748b'), 'contains idle gray color #64748b');
+  assert.ok(content.includes('rgba(255, 255, 255, 0.03)'), 'contains idle background rgba(255, 255, 255, 0.03)');
+  assert.ok(content.includes('rgba(148, 163, 184, 0.15)'), 'contains idle border rgba(148, 163, 184, 0.15)');
+  assert.ok(content.includes('rgba(148, 163, 184, 0.12)'), 'contains inactive bus background rgba(148, 163, 184, 0.12)');
+
+  // Verify moving packet and faint path styles
+  assert.ok(content.includes('.moving-packet'), 'defines .moving-packet class');
+  assert.ok(content.includes('stroke-dasharray: 3 3;'), 'defines faint idle stroke dasharray 3 3');
+  assert.ok(content.includes('stroke: rgba(100, 116, 139, 0.14)'), 'defines faint idle path stroke');
+});
+
+
 
 

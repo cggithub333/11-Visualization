@@ -119,8 +119,8 @@
         <!-- SVG Interactive Connection Paths -->
         <svg id="full-arch-svg" class="full-arch-svg-overlay" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <marker id="arrow-default" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-              <path d="M 0 1.5 L 7 5 L 0 8.5 z" fill="rgba(100, 116, 139, 0.4)" />
+            <marker id="arrow-default" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse">
+              <path d="M 0 1.5 L 7 5 L 0 8.5 z" fill="rgba(100, 116, 139, 0.2)" />
             </marker>
             <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
               <path d="M 0 1 L 8 5 L 0 9 z" fill="#38bdf8" />

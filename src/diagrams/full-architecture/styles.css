@@ -6,7 +6,7 @@
 .full-arch-viewport {
   position: relative;
   width: 100%;
-  min-height: 820px;
+  min-height: 860px;
   background: radial-gradient(circle at 50% 20%, #0d1527 0%, #060a12 100%);
   color: #f1f5f9;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -42,7 +42,7 @@
   min-width: 1480px;
   max-width: 1680px;
   margin: 0 auto;
-  gap: 38px;
+  gap: 44px;
 }
 
 .full-arch-viewport.view-100 .tier-services {
@@ -390,6 +390,7 @@
   overflow: hidden;
 }
 
+/* MVC Subnodes Base (Calm Idle Gray State) */
 .mvc-subnode {
   display: inline-flex;
   align-items: center;
@@ -398,9 +399,14 @@
   height: 26px;
   border-radius: 6px;
   flex-shrink: 0;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.35s ease;
   position: relative;
   z-index: 2;
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: none;
+  transform: scale(1.0);
 }
 
 .mvc-icon-wrap {
@@ -410,59 +416,86 @@
   line-height: 1;
 }
 
-/* View Subnode (eye-dashed · sky-400) */
+/* Default/Idle Muted State for All 3 MVC Subnodes */
 .mvc-subnode-view,
-.mvc-service {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.08);
-  border: 1px solid rgba(56, 189, 248, 0.28);
+.mvc-service,
+.mvc-subnode-controller,
+.mvc-controller,
+.mvc-subnode-model,
+.mvc-model {
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  box-shadow: none;
+  transform: scale(1.0);
+  transition: all 0.35s ease;
 }
 
+/* Manual Inspection Hover Effects */
 .mvc-subnode-view:hover {
+  color: #38bdf8;
   background: rgba(56, 189, 248, 0.18);
   border-color: #38bdf8;
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
-}
-
-/* Controller Subnode (gamepad-directional · indigo-400/violet-400 hub with glow) */
-.mvc-subnode-controller,
-.mvc-controller {
-  color: #a78bfa;
-  background: rgba(99, 102, 241, 0.16);
-  border: 1px solid rgba(167, 139, 250, 0.45);
-  box-shadow: 0 0 8px rgba(99, 102, 241, 0.35);
-  transform: scale(1.05);
+  transform: scale(1.08);
 }
 
 .mvc-subnode-controller:hover {
+  color: #a78bfa;
   background: rgba(99, 102, 241, 0.28);
   border-color: #c084fc;
   box-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
   transform: scale(1.12);
 }
 
-/* Model Subnode (book-bookmark · emerald-400) */
-.mvc-subnode-model,
-.mvc-model {
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.08);
-  border: 1px solid rgba(52, 211, 153, 0.28);
-}
-
 .mvc-subnode-model:hover {
+  color: #34d399;
   background: rgba(16, 185, 129, 0.18);
   border-color: #34d399;
   box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
+  transform: scale(1.08);
+}
+
+/* Active Service Node Subnode Illumination (ONLY when visited by request or active) */
+.service-node[class*="node-active"] .mvc-subnode-view,
+.triad-animating .mvc-subnode-view {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
+}
+
+.service-node[class*="node-active"] .mvc-subnode-controller,
+.triad-animating .mvc-subnode-controller {
+  color: #a78bfa;
+  background: rgba(99, 102, 241, 0.2);
+  border-color: rgba(167, 139, 250, 0.5);
+  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+  transform: scale(1.06);
+}
+
+.service-node[class*="node-active"] .mvc-subnode-model,
+.triad-animating .mvc-subnode-model {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(52, 211, 153, 0.4);
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
+}
+
+.service-node[class*="node-active"] .mvc-bus,
+.triad-animating .mvc-bus {
+  background: rgba(148, 163, 184, 0.24);
 }
 
 /* MVC Internal Signal Bus: View <-> Controller <-> Model (Zero direct View-Model connection) */
 .mvc-bus {
   flex: 1;
   height: 2px;
-  background: rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.12);
   position: relative;
   margin: 0 4px;
   min-width: 10px;
+  transition: background 0.35s ease;
 }
 
 .mvc-bus-line {
@@ -474,6 +507,7 @@
   background: inherit;
 }
 
+/* Inactive pulse dots: MUST NOT animate continuously across all 16 cards when idle */
 .mvc-bus-pulse {
   position: absolute;
   top: -3px;
@@ -481,19 +515,25 @@
   height: 8px;
   border-radius: 50%;
   pointer-events: none;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.mvc-bus-view-ctrl .mvc-bus-pulse {
+/* Pulse dots ONLY animate and display when active or during animation */
+.triad-animating .mvc-bus-view-ctrl .mvc-bus-pulse {
+  opacity: 1;
   background: #38bdf8;
   box-shadow: 0 0 6px #38bdf8;
-  animation: busTravelViewCtrl 2.4s ease-in-out infinite;
+  animation: busTravelViewCtrl 1.1s ease-in-out infinite;
 }
 
-.mvc-bus-ctrl-model .mvc-bus-pulse {
+.triad-animating .mvc-bus-ctrl-model .mvc-bus-pulse {
+  opacity: 1;
   background: #34d399;
   box-shadow: 0 0 6px #34d399;
-  animation: busTravelCtrlModel 2.4s ease-in-out infinite;
-  animation-delay: 1.2s;
+  animation: busTravelCtrlModel 1.1s ease-in-out infinite;
+  animation-delay: 0.55s;
 }
 
 @keyframes busTravelViewCtrl {
@@ -513,15 +553,6 @@
 /* Active Simulation Mediation Animation on Triad Stage */
 .triad-animating .mvc-subnode-controller {
   animation: controllerMediatePulse 0.9s ease-in-out 2;
-}
-
-.triad-animating .mvc-bus-view-ctrl .mvc-bus-pulse {
-  animation-duration: 1.1s;
-}
-
-.triad-animating .mvc-bus-ctrl-model .mvc-bus-pulse {
-  animation-duration: 1.1s;
-  animation-delay: 0.55s;
 }
 
 @keyframes controllerMediatePulse {
@@ -734,7 +765,7 @@
   position: relative;
   display: grid;
   grid-template-rows: auto auto auto auto;
-  gap: 22px;
+  gap: 36px;
   flex: 1;
   z-index: 10;
 }
@@ -752,9 +783,9 @@
 
 .arch-path {
   fill: none;
-  stroke: rgba(100, 116, 139, 0.35);
-  stroke-width: 1.5;
-  stroke-dasharray: 4 4;
+  stroke: rgba(100, 116, 139, 0.14);
+  stroke-width: 1px;
+  stroke-dasharray: 3 3;
   transition: stroke 0.3s ease, stroke-width 0.3s ease, filter 0.3s ease;
 }
 
@@ -807,12 +838,27 @@
   filter: drop-shadow(0 0 8px #34d399);
 }
 
-/* Tier Containers */
+/* Moving Packet SVG Group & Protocol Label Pill */
+.moving-packet {
+  pointer-events: none;
+}
+
+.moving-packet rect {
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));
+}
+
+.moving-packet text {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+/* Tier Containers & Balanced Alignment */
 .tier-row {
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: 16px;
   position: relative;
 }
 
@@ -831,18 +877,19 @@
 
 .tier-ingress {
   justify-content: center;
-  gap: 24px;
+  gap: 28px;
 }
 
 .tier-ingress .mvc-card {
-  min-width: 220px;
-  max-width: 260px;
+  width: 240px;
+  min-width: 210px;
+  max-width: 250px;
 }
 
 .tier-services {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
+  gap: 10px;
   width: 100%;
 }
 
@@ -879,12 +926,13 @@
 
 .tier-storage {
   justify-content: center;
-  gap: 32px;
+  gap: 28px;
 }
 
 .tier-storage .mvc-card {
-  min-width: 220px;
-  max-width: 260px;
+  width: 240px;
+  min-width: 210px;
+  max-width: 250px;
 }
 
 .tier-ai {
@@ -893,8 +941,9 @@
 }
 
 .tier-ai .mvc-card {
-  min-width: 220px;
-  max-width: 260px;
+  width: 240px;
+  min-width: 210px;
+  max-width: 250px;
 }
 
 /* Service Node Cards */
