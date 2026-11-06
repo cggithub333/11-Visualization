@@ -60,7 +60,7 @@
               <option value="case-2">Case 2: Real-time Speaking Turn &amp; Audio Stream</option>
               <option value="case-3">Case 3: Dynamic Adaptive Context Switch</option>
               <option value="case-4">Case 4: Zero-Disk Buffer &amp; External Storage Upload</option>
-              <option value="case-5">Case 5: Transactional Outbox &amp; Message Broker Fan-Out</option>
+              <option value="case-5">Case 5: Transactional Outbox &amp; Event Bus Fan-Out</option>
             </select>
           </div>
 
@@ -307,7 +307,7 @@
                 </div>
               </div>
 
-              <!-- Row 3: Service-Agent <-> Database Agent (Redis) -->
+              <!-- Row 3: Service-Agent <-> Agent Database (MongoDB) -->
               <div class="service-db-pair-row">
                 <div class="service-node context-draggable-node" data-node="agent" id="node-agent">
                   <div class="node-header-row">
@@ -324,22 +324,22 @@
                   ${mvcStageHtml}
                 </div>
 
-                <div class="service-node context-draggable-node" data-node="redis" id="node-redis">
+                <div class="service-node context-draggable-node" data-node="db-agent" id="node-db-agent">
                   <div class="node-header-row">
                     <div class="node-title-group">
-                      <span class="service-icon text-emerald-400" data-lucide="layers">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0l8.57-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+                      <span class="service-icon text-emerald-400" data-lucide="database">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
                       </span>
-                      <span class="node-title text-emerald-400">Agent Memory (Redis)</span>
+                      <span class="node-title text-emerald-400">Agent Database</span>
                     </div>
-                    <span class="badge-protocol badge-nosql">:6379</span>
+                    <span class="badge-protocol badge-nosql">:27017</span>
                   </div>
-                  <div class="node-subtitle">NoSQL Database · Redis In-Memory Cache</div>
-                  <div class="node-desc">Conversation State &amp; Directives</div>
+                  <div class="node-subtitle">NoSQL Database · MongoDB Document Store</div>
+                  <div class="node-desc">Persona &amp; Tone Directive Store</div>
                 </div>
               </div>
 
-              <!-- Row 4: Service-Notification <-> Message Broker (RabbitMQ) -->
+              <!-- Row 4: Service-Notification (pure consumer, no private database) -->
               <div class="service-db-pair-row">
                 <div class="service-node context-draggable-node" data-node="notification" id="node-notification">
                   <div class="node-header-row">
@@ -354,20 +354,6 @@
                   <div class="node-subtitle">Spring Boot Consumer</div>
                   <div class="node-desc">AMQP Consumer · Web Push</div>
                   ${mvcStageHtml}
-                </div>
-
-                <div class="service-node context-draggable-node" data-node="rabbitmq" id="node-rabbitmq">
-                  <div class="node-header-row">
-                    <div class="node-title-group">
-                      <span class="service-icon text-rose-400" data-lucide="mail">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
-                      </span>
-                      <span class="node-title text-rose-400">Message Broker</span>
-                    </div>
-                    <span class="badge-protocol badge-broker">AMQP</span>
-                  </div>
-                  <div class="node-subtitle">RabbitMQ 0-9-1</div>
-                  <div class="node-desc">Fan-Out Outbox Topic Exchange</div>
                 </div>
               </div>
 
@@ -403,6 +389,23 @@
                 </div>
               </div>
 
+              <!-- Event Bus row: Message Broker shared by publishers and consumers -->
+              <div class="event-bus-row">
+                <div class="service-node context-draggable-node event-bus-node" data-node="rabbitmq" id="node-rabbitmq">
+                  <div class="node-header-row">
+                    <div class="node-title-group">
+                      <span class="service-icon text-rose-400" data-lucide="mail">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                      </span>
+                      <span class="node-title text-rose-400">Message Broker</span>
+                    </div>
+                    <span class="badge-protocol badge-broker">AMQP</span>
+                  </div>
+                  <div class="node-subtitle">Event Bus · Topic Exchange</div>
+                  <div class="node-desc">Publish: Session · Class · Curriculum · Agent | Consume: Class · Notification</div>
+                </div>
+              </div>
+
             </div>
 
           </div>
@@ -411,6 +414,21 @@
           <div class="arch-mid-zone">
             <div class="harness-storage-pair-row">
               
+              <!-- Harness Cache (Redis): audio ring buffer, session seat, pause state -->
+              <div class="service-node context-draggable-node" data-node="redis" id="node-redis">
+                <div class="node-header-row">
+                  <div class="node-title-group">
+                    <span class="service-icon text-emerald-400" data-lucide="layers">
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0l8.57-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
+                    </span>
+                    <span class="node-title text-emerald-400">Harness Cache (Redis)</span>
+                  </div>
+                  <span class="badge-protocol badge-nosql">:6379</span>
+                </div>
+                <div class="node-subtitle">In-Memory · Zero-Disk Audio Ring Buffer</div>
+                <div class="node-desc"><span id="label-audio-chunks">Buffer: 0 chunks</span></div>
+              </div>
+
               <!-- Harness Service -->
               <div class="service-node context-draggable-node" data-node="harness" id="node-harness">
                 <div class="node-header-row">
@@ -434,13 +452,13 @@
                     <span class="service-icon text-amber-400" data-lucide="cloud">
                       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/></svg>
                     </span>
-                    <span class="node-title text-amber-400">Database Harness Service</span>
+                    <span class="node-title text-amber-400">External Storage Service</span>
                   </div>
                   <span class="badge-protocol badge-storage">S3 / R2</span>
                 </div>
-                <div class="node-subtitle">External Storage Service · Redis Zero-Disk RAM + Cloudflare R2</div>
+                <div class="node-subtitle">Object Storage · Cloudflare R2</div>
                 <div class="node-desc" style="display:flex;align-items:center;justify-content:space-between;">
-                  <span id="label-audio-chunks">Buffer: 0 chunks</span>
+                  <span>conversation.m4a</span>
                   <span class="r2-badge" id="badge-r2-status">Standby</span>
                 </div>
               </div>

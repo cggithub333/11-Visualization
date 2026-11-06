@@ -7,403 +7,30 @@
   if (typeof module === 'object' && module.exports) {
     let DiagramRegistry;
     let FullArchTemplate;
+    let Routes;
+    let Scenarios;
     try { DiagramRegistry = require('../../core/registry.js'); } catch (e) {}
     try { FullArchTemplate = require('./template.js'); } catch (e) {}
+    try { Routes = require('./routes.js'); } catch (e) {}
+    try { Scenarios = require('./scenarios.js'); } catch (e) {}
     if (typeof globalThis !== 'undefined' && globalThis.DiagramRegistry && !DiagramRegistry) {
       DiagramRegistry = globalThis.DiagramRegistry;
     }
-    const exported = factory(DiagramRegistry, FullArchTemplate);
+    const exported = factory(DiagramRegistry, FullArchTemplate, Routes, Scenarios);
     module.exports = exported;
     module.exports.FullArchitectureSimulation = exported.FullArchitectureSimulation;
     module.exports.default = exported;
   } else {
-    const exports = factory(root.DiagramRegistry, root.FullArchTemplate);
+    const exports = factory(root.DiagramRegistry, root.FullArchTemplate, root.FullArchRoutes, root.FullArchScenarios);
     root.FullArchitectureSimulation = exports.FullArchitectureSimulation;
   }
-})(typeof self !== 'undefined' ? self : this, function (DiagramRegistry, FullArchTemplate) {
+})(typeof self !== 'undefined' ? self : this, function (DiagramRegistry, FullArchTemplate, Routes, Scenarios) {
   'use strict';
 
-  const SCENARIOS = [
-    {
-      id: 'case-1',
-      title: '1. Ingress & Session Init',
-      steps: [
-        {
-          source: 'web-client',
-          target: 'reverse-proxy',
-          protocol: 'HTTPS',
-          label: 'Init Session',
-          method: 'POST /api/v1/session/start',
-          latency: '2.1 ms',
-          desc: 'Student initiates speaking session from browser; hits TLS Reverse Proxy',
-          payload: '{"studentId": "std_9821", "action": "start_session", "device": "chrome_122"}'
-        },
-        {
-          source: 'reverse-proxy',
-          target: 'apisix',
-          protocol: 'HTTP/2',
-          label: 'Edge Ingress',
-          method: 'PROXY /api/v1/session/start',
-          latency: '1.2 ms',
-          desc: 'Reverse Proxy terminates TLS and forwards internal HTTP/2 stream to APISIX Gateway',
-          payload: '{"proxy": "nginx-ingress", "upstream": "apisix:9080", "tls": "TLS_1_3"}'
-        },
-        {
-          source: 'apisix',
-          target: 'iam',
-          protocol: 'JWT Bearer',
-          label: 'Validate JWT',
-          method: 'OIDC Token Validation',
-          latency: '3.8 ms',
-          desc: 'APISIX verifies JWT token signature against Microsoft Entra ID JWKS endpoint',
-          payload: '{"iss": "login.microsoftonline.com", "aud": "espp-core", "status": "TOKEN_VALID"}'
-        },
-        {
-          source: 'apisix',
-          target: 'session',
-          protocol: 'REST',
-          label: 'Create Session',
-          method: 'POST /sessions',
-          latency: '12.4 ms',
-          desc: 'APISIX routes authenticated request to Session Service to provision session state',
-          payload: '{"externalId": "sess_842a1", "studentId": "std_9821", "lessonId": "les_a2_04"}'
-        },
-        {
-          source: 'session',
-          target: 'postgres',
-          protocol: 'Postgres',
-          label: 'Store Session',
-          method: 'INSERT INTO session.sessions',
-          latency: '5.2 ms',
-          desc: 'Session Service persists session record into PostgreSQL ACID cluster',
-          payload: '{"schema": "session", "table": "sessions", "rowId": "sess_842a1", "status": "ACTIVE"}'
-        },
-        {
-          source: 'session',
-          target: 'harness',
-          protocol: 'REST',
-          label: 'Init Voice Room',
-          method: 'POST /harness/session/init',
-          latency: '8.1 ms',
-          desc: 'Session Service signals Voice Harness to instantiate Turn FSM & audio buffers',
-          payload: '{"sessionId": "sess_842a1", "mode": "VOICE_INTERACTIVE", "targetTurns": 8}'
-        }
-      ]
-    },
-    {
-      id: 'case-2',
-      title: '2. Real-time Speaking Turn',
-      steps: [
-        {
-          source: 'web-client',
-          target: 'reverse-proxy',
-          protocol: 'WebSocket',
-          label: 'Audio Stream',
-          method: 'WS audio_chunk (AAC-ADTS)',
-          latency: '4.5 ms',
-          desc: 'Student speaks into microphone; browser streams AAC-ADTS audio chunks via WebSocket',
-          payload: '{"type": "audio_chunk", "codec": "aac-adts", "sampleRate": 24000, "bytes": 4096}'
-        },
-        {
-          source: 'reverse-proxy',
-          target: 'apisix',
-          protocol: 'WS Proxy',
-          label: 'Audio Chunk',
-          method: 'WS Tunnel /ws/audio',
-          latency: '1.4 ms',
-          desc: 'Reverse Proxy forwards duplex WebSocket audio stream to APISIX Gateway',
-          payload: '{"tunnel": "duplex-ws", "seq": 14, "upstream": "apisix:9080"}'
-        },
-        {
-          source: 'apisix',
-          target: 'harness',
-          protocol: 'WebSocket',
-          label: 'Audio Stream',
-          method: 'WS /ws/speech_stream',
-          latency: '2.1 ms',
-          desc: 'APISIX streams audio chunks directly down to Voice Harness Orchestrator',
-          payload: '{"proxy": "apisix", "downstream": "harness:8081", "chunkSeq": 14}'
-        },
-        {
-          source: 'harness',
-          target: 'cloudflare-r2',
-          protocol: 'RESP',
-          label: 'Buffer Audio',
-          method: 'LPUSH session:842a1:audio',
-          latency: '1.8 ms',
-          desc: 'Harness buffers raw audio chunk into Redis RAM (Zero-Disk in-memory ring buffer)',
-          payload: '{"key": "session:842a1:audio", "chunk": 14, "mode": "zero-disk-ram"}'
-        },
-        {
-          source: 'harness',
-          target: 'ai-voice',
-          protocol: 'gRPC',
-          label: 'Speech-to-Text',
-          method: 'POST /stt/transcribe',
-          latency: '185.0 ms',
-          desc: 'Faster-Whisper STT converts real-time audio stream into text transcript',
-          payload: '{"transcript": "I think electric cars are very good for the environment.", "confidence": 0.94}'
-        },
-        {
-          source: 'harness',
-          target: 'laya',
-          protocol: 'HTTP/2',
-          label: 'Decision Call',
-          method: 'POST /intent/classify',
-          latency: '48.6 ms',
-          desc: 'Decision Server classifies turn intent in <70ms',
-          payload: '{"intent": "OPINION_ARGUMENT", "relevance": 0.91, "cefrScore": "B1.2", "system1": true}'
-        },
-        {
-          source: 'laya',
-          target: 'vllm',
-          protocol: 'HTTP/REST',
-          label: 'LLM Reasoning',
-          method: 'POST /v1/chat/completions',
-          latency: '210.0 ms',
-          desc: 'LLM Server (Qwen-2.5B-INSTRUCT) performs deep cognitive reasoning for teacher reply',
-          payload: '{"role": "assistant", "reply": "That is a great point! How do you think battery disposal impacts that?"}'
-        },
-        {
-          source: 'harness',
-          target: 'tts',
-          protocol: 'REST',
-          label: 'Voice Synthesize',
-          method: 'POST /tts/synthesize',
-          latency: '120.4 ms',
-          desc: 'TTS Server (Kokoro TTS) synthesizes high-fidelity natural teacher voice stream',
-          payload: '{"voice": "en_us_female", "speed": 1.0, "format": "aac", "durationMs": 3200}'
-        },
-        {
-          source: 'harness',
-          target: 'web-client',
-          protocol: 'WebSocket',
-          label: 'Audio Return',
-          method: 'WS bot_audio_chunk',
-          latency: '12.2 ms',
-          desc: 'Synthesized voice audio streamed back to student browser for immediate audio playback',
-          payload: '{"event": "audio_playback", "bytes": 16384, "turnIndex": 3}'
-        }
-      ]
-    },
-    {
-      id: 'case-3',
-      title: '3. Dynamic Context Switch',
-      steps: [
-        {
-          source: 'harness',
-          target: 'harness',
-          protocol: 'Internal FSM',
-          label: 'Context Check',
-          method: 'EVAL evaluateTurnFsm()',
-          latency: '2.1 ms',
-          desc: 'Harness FSM detects: Turn 1 lock expired, 4 good turns achieved, topic similarity < 0.65',
-          payload: '{"decision": "CONTEXT_SWITCH", "oldTopic": "Electric Cars", "newTopic": "Public Transit"}'
-        },
-        {
-          source: 'harness',
-          target: 'agent',
-          protocol: 'gRPC',
-          label: 'Fetch Persona',
-          method: 'gRPC GetAgentPersonaConfig(:50051)',
-          latency: '16.4 ms',
-          desc: 'Harness requests new adaptive subcontext persona & prompt directives from Service-Agent',
-          payload: '{"persona": "Debater-B1", "directive": "SUB_CONTEXT_BRIDGE_ADVANCED", "protocol": "gRPC"}'
-        },
-        {
-          source: 'agent',
-          target: 'redis',
-          protocol: 'RESP',
-          label: 'Cache State',
-          method: 'HSET agent:842a1:context',
-          latency: '2.4 ms',
-          desc: 'Service-Agent updates Redis memory cache with new conversational context and personality',
-          payload: '{"persona": "Debater-B1", "subContext": "Public Transit", "ttl": 3600}'
-        },
-        {
-          source: 'harness',
-          target: 'curriculum',
-          protocol: 'REST',
-          label: 'Fetch Rubrics',
-          method: 'GET /curriculum/subcontext/transit',
-          latency: '14.2 ms',
-          desc: 'Harness fetches new lesson rubric & criteria from Service-Curriculum for the transitioned topic',
-          payload: '{"subContext": "Public Transit", "keyPhrases": ["subway", "congestion", "eco-friendly"]}'
-        },
-        {
-          source: 'harness',
-          target: 'laya',
-          protocol: 'HTTP',
-          label: 'Decision Inject',
-          method: 'POST /directive/inject',
-          latency: '12.8 ms',
-          desc: 'Harness injects compact <45 token transition directive into Decision Server',
-          payload: '{"directive": "[BRIDGE: validate_then_pivot -> subtopic: public_transit]"}'
-        },
-        {
-          source: 'laya',
-          target: 'vllm',
-          protocol: 'HTTP/REST',
-          label: 'Bridge Prompt',
-          method: 'POST /v1/chat/completions (Prefill Cache)',
-          latency: '140.0 ms',
-          desc: 'vLLM model server generates smooth transitional bridge prompt with zero hallucinations',
-          payload: '{"tokens": 38, "bridge": "Speaking of vehicles, how effective is the subway system in your city?"}'
-        }
-      ]
-    },
-    {
-      id: 'case-4',
-      title: '4. Audio Buffer & R2 Upload',
-      steps: [
-        {
-          source: 'web-client',
-          target: 'harness',
-          protocol: 'WebSocket',
-          label: 'Finish Session',
-          method: 'WS session_complete',
-          latency: '5.2 ms',
-          desc: 'Student completes speaking lesson; Harness triggers AudioMuxService.muxAndUpload()',
-          payload: '{"event": "SESSION_FINISH", "sessionId": "sess_842a1", "totalTurns": 8}'
-        },
-        {
-          source: 'harness',
-          target: 'cloudflare-r2',
-          protocol: 'RESP',
-          label: 'Drain Buffer',
-          method: 'LRANGE session:842a1:audio 0 -1',
-          latency: '3.4 ms',
-          desc: 'AudioMuxService pulls all raw AAC-ADTS segments from Redis RAM in single batch',
-          payload: '{"key": "session:842a1:audio", "chunksRetrieved": 48, "totalSizeKb": 768}'
-        },
-        {
-          source: 'harness',
-          target: 'harness',
-          protocol: 'In-Memory',
-          label: 'Mux AAC->M4A',
-          method: 'ffmpeg bitstream copy remux',
-          latency: '42.0 ms',
-          desc: 'Zero-Disk remuxing via ffmpeg: -c:a copy -f mp4 -movflags empty_moov+default_base_moof+frag_keyframe',
-          payload: '{"remux": "aac-to-fragmented-m4a", "diskUsage": 0, "outputFile": "conversation.m4a"}'
-        },
-        {
-          source: 'harness',
-          target: 'cloudflare-r2',
-          protocol: 'S3/R2',
-          label: 'Upload R2',
-          method: 'S3 PutObject (Multipart)',
-          latency: '188.5 ms',
-          desc: 'Harness streams fragmented conversation.m4a directly to Cloudflare R2 bucket',
-          payload: '{"bucket": "espp-audio", "key": "sessions/sess_842a1/conversation.m4a", "sizeKb": 745}'
-        },
-        {
-          source: 'harness',
-          target: 'session',
-          protocol: 'REST',
-          label: 'Notify Done',
-          method: 'PATCH /sessions/842a1/audio_recorded',
-          latency: '9.8 ms',
-          desc: 'Session Service records R2 asset key and generates 2-hour presigned playback URL',
-          payload: '{"audioRecorded": true, "r2Key": "sessions/sess_842a1/conversation.m4a", "ttl": 7200}'
-        }
-      ]
-    },
-    {
-      id: 'case-5',
-      title: '5. RabbitMQ Outbox Fan-Out',
-      steps: [
-        {
-          source: 'session',
-          target: 'postgres',
-          protocol: 'Postgres',
-          label: 'Save Outbox',
-          method: 'INSERT INTO session.outbox',
-          latency: '4.5 ms',
-          desc: 'Spring Modulith writes session.completed.v1 event into transactional outbox table',
-          payload: '{"eventType": "session.completed.v1", "aggregateId": "sess_842a1", "table": "outbox"}'
-        },
-        {
-          source: 'session',
-          target: 'rabbitmq',
-          protocol: 'AMQP',
-          label: 'Publish Event',
-          method: 'BASIC_PUBLISH exchange=topic.session',
-          latency: '8.2 ms',
-          desc: 'Transactional outbox poller publishes event to RabbitMQ topic exchange',
-          payload: '{"exchange": "topic.session", "routingKey": "session.completed.v1", "msgId": "evt_9901"}'
-        },
-        {
-          source: 'rabbitmq',
-          target: 'class',
-          protocol: 'AMQP',
-          label: 'Class Sync',
-          method: 'AMQP Deliver (queue=class.sync)',
-          latency: '6.4 ms',
-          desc: 'RabbitMQ fans out event to Service-Class for student grading & level-up progression',
-          payload: '{"service": "Service-Class", "event": "session.completed", "studentLevelUp": true}'
-        },
-        {
-          source: 'rabbitmq',
-          target: 'notification',
-          protocol: 'AMQP',
-          label: 'Push Alert',
-          method: 'AMQP Deliver (queue=notification.push)',
-          latency: '7.1 ms',
-          desc: 'RabbitMQ fans out event to Service-Notification to send student push alert & email',
-          payload: '{"service": "Service-Notification", "action": "send_push", "title": "Lesson Completed!"}'
-        },
-        {
-          source: 'class',
-          target: 'rabbitmq',
-          protocol: 'AMQP',
-          label: 'Event ACK',
-          method: 'BASIC_ACK',
-          latency: '2.0 ms',
-          desc: 'Consumer microservices confirm message ACK, ensuring at-least-once delivery',
-          payload: '{"status": "ACK", "processedQueues": ["class.sync", "notification.push"]}'
-        }
-      ]
-    }
-  ];
-
-  // System Connections Matching Hand-Drawn Topology
-  const CONNECTIONS = [
-    // Ingress Pipeline (Left to Right)
-    ['web-client', 'reverse-proxy'],
-    ['reverse-proxy', 'apisix'],
-
-    // IAM Authentication (Vertical Upward)
-    ['apisix', 'iam'],
-
-    // Gateway Fan-Out to Microservices (Rightwards)
-    ['apisix', 'class'],
-    ['apisix', 'curriculum'],
-    ['apisix', 'agent'],
-    ['apisix', 'notification'],
-    ['apisix', 'session'],
-
-    // Microservices to their Dedicated Databases (Horizontal Straight)
-    ['class', 'db-class'],
-    ['curriculum', 'db-curriculum'],
-    ['agent', 'redis'],
-    ['notification', 'rabbitmq'],
-    ['session', 'postgres'],
-
-    // Ingress Gateway to Harness Voice Orchestrator (Downward)
-    ['apisix', 'harness'],
-
-    // Session Service to Harness (Vertical Bidirectional)
-    ['session', 'harness'],
-
-    // Harness to Harness Storage (Horizontal Right)
-    ['harness', 'cloudflare-r2'],
-
-    // Harness to AI Inference Cluster (Fanning Downwards)
-    ['harness', 'ai-voice'],
-    ['harness', 'laya'],
-    ['laya', 'vllm'],
-    ['harness', 'tts']
-  ];
+  const SCENARIOS = Scenarios.SCENARIOS;
+  const CONNECTIONS = Routes.ROUTES.map((r) => [r.a, r.b]);
+  const HOP_MS = 1150;
+  const PLAY_GAP_MS = 350;
 
   class FullArchitectureSimulation {
     constructor(options = {}) {
@@ -425,6 +52,33 @@
       };
       this.boundHandlers = {};
       this._activeMvcTimeouts = [];
+      this._playToken = 0;
+      this._playRun = 0;
+      this._stepPromise = null;
+    }
+
+    sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
+    getHops(step) {
+      return [step.source, ...(step.via || []), step.target]
+        .filter((id, i, arr) => i === 0 || id !== arr[i - 1]);
+    }
+
+    getRoute(srcId, tgtId, gRect) {
+      const found = Routes.findRoute(srcId, tgtId);
+      if (!found) return null;
+      if (typeof document === 'undefined') return null;
+      const aEl = document.getElementById(`node-${found.route.a}`);
+      const bEl = document.getElementById(`node-${found.route.b}`);
+      if (!aEl || !bEl) return null;
+      const toRect = (el) => {
+        const r = el.getBoundingClientRect();
+        return { left: r.left - gRect.left, top: r.top - gRect.top, right: r.right - gRect.left, bottom: r.bottom - gRect.top };
+      };
+      const built = Routes.buildRoute(found.route, toRect(aEl), toRect(bEl));
+      return { built, d: found.forward ? built.d : built.dReverse };
     }
 
     generateSquaredPath(x1, y1, x2, y2, mid, orientation = 'vertical') {
@@ -567,6 +221,7 @@
     setCase(caseId) {
       if (this.state.activeCaseId !== caseId) {
         this.pause();
+        this.cancelPlayback();
         this.state.activeCaseId = caseId;
         this.state.stepIndex = 0;
         this.clearMvcAnimations();
@@ -598,6 +253,7 @@
 
       if (!this.headless && typeof document !== 'undefined') {
         this.renderCurrentState();
+        this.cancelPlayback();
         this.executeStep(currentCase.steps[this.state.stepIndex]);
       }
 
@@ -616,9 +272,76 @@
         ? 'node-active-purple'
         : (this.state.activeCaseId === 'case-4' ? 'node-active-amber' : 'node-active-cyan');
 
-      this.animateServiceMvcCycle(step.source, () => {
-        this.emitPacket(step.source, step.target, highlightClass);
-      });
+      const token = this._playToken;
+      this._stepPromise = Promise.resolve(this.animateServiceMvcCycle(step.source))
+        .then(() => {
+          if (token !== this._playToken) return undefined;
+          return this.playStep(step, highlightClass);
+        });
+      return this._stepPromise;
+    }
+
+    cancelPlayback() {
+      this._playToken += 1;
+    }
+
+    pulseNode(nodeId) {
+      if (typeof document === 'undefined') return;
+      const el = document.getElementById(`node-${nodeId}`);
+      if (!el) return;
+      el.classList.add('node-active');
+      setTimeout(() => el.classList.remove('node-active'), 300);
+    }
+
+    renderResponsePhase(step) {
+      if (this.headless || typeof document === 'undefined' || !step.response) return;
+      const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
+      const caseLabel = document.getElementById('telemetry-case-label');
+      const descLabel = document.getElementById('telemetry-desc-label');
+      const payloadEl = document.getElementById('telemetry-payload');
+      const protoEl = document.getElementById('metric-protocol');
+      const latencyEl = document.getElementById('metric-latency');
+      if (caseLabel) caseLabel.textContent = `${currentCase.title.toUpperCase()} · STEP ${this.state.stepIndex + 1}/${currentCase.steps.length} · RESPONSE`;
+      if (descLabel) descLabel.textContent = step.response.desc;
+      if (payloadEl) payloadEl.textContent = step.response.payload;
+      if (protoEl) protoEl.textContent = `${step.protocol} (response)`;
+      if (latencyEl) latencyEl.textContent = step.response.latency;
+    }
+
+    async playStep(step, highlightClass) {
+      if (this.headless || typeof document === 'undefined' || !step) return;
+      const token = this._playToken;
+      const hops = this.getHops(step);
+
+      if (hops.length === 1) {
+        this.pulseNode(hops[0]);
+        await this.sleep(HOP_MS);
+        if (token !== this._playToken) return;
+      } else {
+        for (let i = 0; i < hops.length - 1; i++) {
+          this.highlightPath(hops[i], hops[i + 1], highlightClass);
+          this.emitPacket(hops[i], hops[i + 1], highlightClass, step.label);
+          await this.sleep(HOP_MS);
+          if (token !== this._playToken) return;
+          this.pulseNode(hops[i + 1]);
+        }
+      }
+
+      if (!step.response) return;
+      this.renderResponsePhase(step);
+      if (hops.length === 1) {
+        this.pulseNode(hops[0]);
+        await this.sleep(HOP_MS);
+        if (token !== this._playToken) return;
+      } else {
+        for (let i = hops.length - 1; i > 0; i--) {
+          this.highlightPath(hops[i], hops[i - 1], highlightClass);
+          this.emitPacket(hops[i], hops[i - 1], highlightClass, step.response.label, true);
+          await this.sleep(HOP_MS);
+          if (token !== this._playToken) return;
+          this.pulseNode(hops[i - 1]);
+        }
+      }
     }
 
     togglePlayScenario() {
@@ -632,22 +355,31 @@
     play() {
       this.state.isPlaying = true;
       this.updatePlayPauseIcons();
-      if (this.state.timerId) clearInterval(this.state.timerId);
-      this.state.timerId = setInterval(() => {
-        this.stepNext();
-      }, 2400);
-      if (this.state.timerId && typeof this.state.timerId.unref === 'function') {
-        this.state.timerId.unref();
-      }
+      if (this.headless || typeof document === 'undefined') return;
+      const runId = ++this._playRun;
+      const loop = async () => {
+        let first = true;
+        while (this.state.isPlaying && runId === this._playRun) {
+          if (first) {
+            this.cancelPlayback();
+            this.renderCurrentState();
+            this.executeStep();
+          } else {
+            this.stepNext();
+          }
+          first = false;
+          await this._stepPromise;
+          await this.sleep(PLAY_GAP_MS);
+        }
+      };
+      loop();
     }
 
     pause() {
       this.state.isPlaying = false;
+      this._playRun += 1;
+      this.cancelPlayback();
       this.updatePlayPauseIcons();
-      if (this.state.timerId) {
-        clearInterval(this.state.timerId);
-        this.state.timerId = null;
-      }
     }
 
     toggleZoom() {
@@ -730,114 +462,16 @@
       });
     }
 
-    computePathCoordinates(srcId, tgtId, gRect) {
-      const srcEl = document.getElementById(`node-${srcId}`);
-      const tgtEl = document.getElementById(`node-${tgtId}`);
-      if (!srcEl || !tgtEl) return null;
-
-      const s = srcEl.getBoundingClientRect();
-      const t = tgtEl.getBoundingClientRect();
-
-      let x1, y1, x2, y2, mid, orientation = 'vertical';
-
-      // 1. Direct Horizontal Left-to-Right Pairs
-      if (
-        (srcId === 'web-client' && tgtId === 'reverse-proxy') ||
-        (srcId === 'reverse-proxy' && tgtId === 'apisix') ||
-        (srcId === 'class' && tgtId === 'db-class') ||
-        (srcId === 'curriculum' && tgtId === 'db-curriculum') ||
-        (srcId === 'agent' && (tgtId === 'redis' || tgtId === 'db-agent')) ||
-        (srcId === 'notification' && (tgtId === 'rabbitmq' || tgtId === 'db-notification')) ||
-        (srcId === 'session' && (tgtId === 'postgres' || tgtId === 'db-session')) ||
-        (srcId === 'harness' && (tgtId === 'cloudflare-r2' || tgtId === 'db-harness'))
-      ) {
-        x1 = Math.round(s.right - gRect.left);
-        y1 = Math.round(s.top + s.height / 2 - gRect.top);
-        x2 = Math.round(t.left - gRect.left);
-        y2 = Math.round(t.top + t.height / 2 - gRect.top);
-        mid = Math.round((x1 + x2) / 2);
-        orientation = 'horizontal';
-      }
-      // 2. Direct Vertical Upward Pairs (APISIX -> IAM)
-      else if (srcId === 'apisix' && tgtId === 'iam') {
-        x1 = Math.round(s.left + s.width / 2 - gRect.left);
-        y1 = Math.round(s.top - gRect.top);
-        x2 = Math.round(t.left + t.width / 2 - gRect.left);
-        y2 = Math.round(t.bottom - gRect.top);
-        mid = Math.round((y1 + y2) / 2);
-        orientation = 'vertical';
-      }
-      // 3. Direct Vertical Downward Pairs (Session -> Harness, Decision -> LLM)
-      else if (
-        (srcId === 'session' && tgtId === 'harness') ||
-        (srcId === 'laya' && tgtId === 'vllm')
-      ) {
-        x1 = Math.round(s.left + s.width / 2 - gRect.left);
-        y1 = Math.round(s.bottom - gRect.top);
-        x2 = Math.round(t.left + t.width / 2 - gRect.left);
-        y2 = Math.round(t.top - gRect.top);
-        mid = Math.round((y1 + y2) / 2);
-        orientation = 'vertical';
-      }
-      // 4. Gateway to Harness (Rightward/Downward into Corridor)
-      else if (srcId === 'apisix' && tgtId === 'harness') {
-        x1 = Math.round(s.right - gRect.left);
-        y1 = Math.round(s.bottom - s.height / 4 - gRect.top);
-        x2 = Math.round(t.left - gRect.left);
-        y2 = Math.round(t.top + t.height / 2 - gRect.top);
-        mid = Math.round((x1 + x2) / 2);
-        orientation = 'horizontal';
-      }
-      // 5. Gateway Fan-Out to Microservices (Rightwards)
-      else if (srcId === 'apisix') {
-        x1 = Math.round(s.right - gRect.left);
-        y1 = Math.round(s.top + s.height / 2 - gRect.top);
-        x2 = Math.round(t.left - gRect.left);
-        y2 = Math.round(t.top + t.height / 2 - gRect.top);
-        mid = Math.round((x1 + x2) / 2);
-        orientation = 'horizontal';
-      }
-      // 6. Harness down to AI Inference Cluster (STT, Decision, TTS)
-      else if (srcId === 'harness' && (tgtId === 'ai-voice' || tgtId === 'laya' || tgtId === 'tts')) {
-        let anchorRatio = 0.5;
-        if (tgtId === 'ai-voice') anchorRatio = 0.25;
-        if (tgtId === 'tts') anchorRatio = 0.75;
-
-        x1 = Math.round(s.left + s.width * anchorRatio - gRect.left);
-        y1 = Math.round(s.bottom - gRect.top);
-        x2 = Math.round(t.left + t.width / 2 - gRect.left);
-        y2 = Math.round(t.top - gRect.top);
-        mid = Math.round((y1 + y2) / 2);
-        orientation = 'vertical';
-      }
-      // 7. Generic Fallback
-      else {
-        x1 = Math.round(s.left + s.width / 2 - gRect.left);
-        y1 = Math.round(s.top + s.height / 2 - gRect.top);
-        x2 = Math.round(t.left + t.width / 2 - gRect.left);
-        y2 = Math.round(t.top + t.height / 2 - gRect.top);
-        mid = Math.round((y1 + y2) / 2);
-        orientation = 'vertical';
-      }
-
-      return { x1, y1, x2, y2, yMid: mid, mid, orientation };
-    }
-
-    emitPacket(srcId, tgtId, colorClass, label) {
+    emitPacket(srcId, tgtId, colorClass, label, isResponse = false) {
       if (this.headless || typeof document === 'undefined') return;
       const packetsGroup = document.getElementById('svg-packets-group');
       const grid = document.getElementById('full-arch-grid');
       if (!packetsGroup || !grid) return;
 
-      const srcEl = document.getElementById(`node-${srcId}`);
-      const tgtEl = document.getElementById(`node-${tgtId}`);
-      if (!srcEl || !tgtEl) return;
-
       const gridRect = grid.getBoundingClientRect();
-      const coords = this.computePathCoordinates(srcId, tgtId, gridRect);
-      if (!coords) return;
-
-      const pathD = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.mid ?? coords.yMid, coords.orientation);
+      const route = this.getRoute(srcId, tgtId, gridRect);
+      if (!route) return;
+      const pathD = route.d;
 
       let packetClass = 'packet-dot';
       let fillColor = '#38bdf8';
@@ -853,21 +487,23 @@
       }
 
       const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      group.setAttribute('class', 'moving-packet');
+      group.setAttribute('class', isResponse ? 'moving-packet moving-packet-response' : 'moving-packet');
       group.setAttribute('style', `color: ${fillColor}`);
 
+      const dotGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       const anim = document.createElementNS('http://www.w3.org/2000/svg', 'animateMotion');
       anim.setAttribute('path', pathD);
       anim.setAttribute('dur', '1.1s');
       anim.setAttribute('repeatCount', '1');
       anim.setAttribute('fill', 'freeze');
-      group.appendChild(anim);
+      dotGroup.appendChild(anim);
 
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
       circle.setAttribute('r', '5');
       circle.setAttribute('class', packetClass);
       circle.setAttribute('fill', fillColor);
-      group.appendChild(circle);
+      dotGroup.appendChild(circle);
+      group.appendChild(dotGroup);
 
       let shortLabel = label;
       if (!shortLabel && this.state) {
@@ -882,22 +518,52 @@
         const textWidth = Math.max(20, Math.round(shortLabel.length * 6.0));
         const pillWidth = textWidth + 8;
 
+        const textRects = [];
+        const nodeEls = document.querySelectorAll('.service-node[data-node]');
+        nodeEls.forEach((el) => {
+          const tEls = el.querySelectorAll('.node-title, .node-subtitle, .node-desc, .node-port, .badge-protocol');
+          tEls.forEach((t) => {
+            const tr = t.getBoundingClientRect();
+            textRects.push({
+              left: tr.left - gridRect.left,
+              top: tr.top - gridRect.top,
+              right: tr.right - gridRect.left,
+              bottom: tr.bottom - gridRect.top
+            });
+          });
+        });
+
+        const pts = (route.d === route.built.d) ? route.built.points : route.built.points.slice().reverse();
+        const placement = Routes.findLabelPlacement
+          ? Routes.findLabelPlacement(pts, pillWidth, 15, textRects)
+          : null;
+
+        const pillLeft = placement ? placement.pill.left : 8;
+        const pillTop = placement ? placement.pill.top : -12;
+        const textX = placement ? placement.x : 8 + pillWidth / 2;
+        const textY = placement ? placement.y : -4.5;
+
+        const labelGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        labelGroup.setAttribute('class', 'packet-label-group');
+
         const pill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
         pill.setAttribute('class', 'packet-label-pill');
-        pill.setAttribute('x', '8');
-        pill.setAttribute('y', '-12');
+        pill.setAttribute('x', String(pillLeft));
+        pill.setAttribute('y', String(pillTop));
         pill.setAttribute('width', String(pillWidth));
         pill.setAttribute('height', '15');
         pill.setAttribute('rx', '3');
         pill.setAttribute('ry', '3');
-        group.appendChild(pill);
+        labelGroup.appendChild(pill);
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
         text.setAttribute('class', 'packet-label-text');
-        text.setAttribute('x', String(8 + pillWidth / 2));
-        text.setAttribute('y', '-4.5');
+        text.setAttribute('x', String(textX));
+        text.setAttribute('y', String(textY));
         text.textContent = shortLabel;
-        group.appendChild(text);
+        labelGroup.appendChild(text);
+
+        group.appendChild(labelGroup);
       }
 
       packetsGroup.appendChild(group);
@@ -964,20 +630,10 @@
             await this.animateServiceMvcCycle(step.source);
             if (!this.state.isBatchRunning) break;
 
-            this.emitPacket(step.source, step.target, highlightClass, this.getShortProtocolLabel(step));
-
-            await new Promise((r) => setTimeout(r, 1150));
+            await this.playStep(step, highlightClass);
             if (!this.state.isBatchRunning) break;
 
-            const tgtNode = document.getElementById(`node-${step.target}`);
-            if (tgtNode) {
-              tgtNode.classList.add('node-active');
-              setTimeout(() => {
-                tgtNode.classList.remove('node-active');
-              }, 300);
-            }
-
-            await new Promise((r) => setTimeout(r, 150));
+            await this.sleep(150);
           }
 
           if (req < numRequests && this.state.isBatchRunning) {
@@ -995,6 +651,7 @@
 
     reset() {
       this.pause();
+      this.cancelPlayback();
       this.state.isBatchRunning = false;
       this.clearMvcAnimations();
       this.state.stepIndex = 0;
@@ -1099,20 +756,44 @@
       svgGroup.innerHTML = '';
       const gridRect = grid.getBoundingClientRect();
 
-      this.connections.forEach(([srcId, tgtId]) => {
-        const coords = this.computePathCoordinates(srcId, tgtId, gridRect);
-        if (!coords) return;
+      // Sort connections so bus trunk paths are rendered first (in background)
+      const sortedConns = [...this.connections].sort(([a1, b1], [a2, b2]) => {
+        const r1 = Routes.findRoute(a1, b1)?.route;
+        const r2 = Routes.findRoute(a2, b2)?.route;
+        const b1Bus = r1?.bus ? 0 : 1;
+        const b2Bus = r2?.bus ? 0 : 1;
+        return b1Bus - b2Bus;
+      });
+
+      sortedConns.forEach(([srcId, tgtId]) => {
+        const found = Routes.findRoute(srcId, tgtId);
+        if (!found) return;
+        const routeObj = found.route;
+        const route = this.getRoute(srcId, tgtId, gridRect);
+        if (!route) return;
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('id', `path-${srcId}-${tgtId}`);
         path.setAttribute('data-connection', `${srcId}-${tgtId}`);
         path.setAttribute('data-id-alt', `path-${tgtId}-${srcId}`);
-        path.setAttribute('class', 'arch-path');
 
-        const d = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.mid ?? coords.yMid, coords.orientation);
-        path.setAttribute('d', d);
-        path.setAttribute('marker-start', 'url(#arrow-default-start)');
-        path.setAttribute('marker-end', 'url(#arrow-default)');
+        const isBus = Boolean(routeObj.bus);
+        path.setAttribute('class', isBus ? 'arch-path arch-path-bus' : 'arch-path');
+        path.setAttribute('d', route.built.d);
+
+        if (isBus) {
+          if (routeObj.dir === 'publish') {
+            path.setAttribute('marker-end', 'url(#arrow-default)');
+          } else if (routeObj.dir === 'consume') {
+            path.setAttribute('marker-start', 'url(#arrow-default-start)');
+          } else {
+            path.setAttribute('marker-start', 'url(#arrow-default-start)');
+            path.setAttribute('marker-end', 'url(#arrow-default)');
+          }
+        } else {
+          path.setAttribute('marker-start', 'url(#arrow-default-start)');
+          path.setAttribute('marker-end', 'url(#arrow-default)');
+        }
 
         svgGroup.appendChild(path);
       });
@@ -1123,8 +804,29 @@
 
       document.querySelectorAll('.arch-path').forEach((p) => {
         p.classList.remove('arch-path-active', 'arch-path-purple', 'arch-path-orange', 'arch-path-emerald');
-        p.setAttribute('marker-start', 'url(#arrow-default-start)');
-        p.setAttribute('marker-end', 'url(#arrow-default)');
+        const conn = p.getAttribute('data-connection');
+        if (conn) {
+          const [a, b] = conn.split('-');
+          const rObj = Routes.findRoute(a, b)?.route;
+          if (rObj?.bus) {
+            if (rObj.dir === 'publish') {
+              p.removeAttribute('marker-start');
+              p.setAttribute('marker-end', 'url(#arrow-default)');
+            } else if (rObj.dir === 'consume') {
+              p.setAttribute('marker-start', 'url(#arrow-default-start)');
+              p.removeAttribute('marker-end');
+            } else {
+              p.setAttribute('marker-start', 'url(#arrow-default-start)');
+              p.setAttribute('marker-end', 'url(#arrow-default)');
+            }
+          } else {
+            p.setAttribute('marker-start', 'url(#arrow-default-start)');
+            p.setAttribute('marker-end', 'url(#arrow-default)');
+          }
+        } else {
+          p.setAttribute('marker-start', 'url(#arrow-default-start)');
+          p.setAttribute('marker-end', 'url(#arrow-default)');
+        }
       });
 
       let path = document.getElementById(`path-${srcId}-${tgtId}`) ||

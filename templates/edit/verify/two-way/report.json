@@ -1,0 +1,87 @@
+{
+  "geometry": [],
+  "topology": [],
+  "cases": {
+    "case-1": {
+      "expected": 12,
+      "seen": [
+        "Init Session",
+        "Edge Ack",
+        "Edge Ingress",
+        "Route Ack",
+        "Validate JWT",
+        "Token Valid",
+        "Create Session",
+        "Session Created",
+        "Store Session",
+        "Row Saved",
+        "Init Voice Room",
+        "Room Ready"
+      ],
+      "missing": []
+    },
+    "case-2": {
+      "expected": 14,
+      "seen": [
+        "Audio Stream",
+        "Audio Chunk",
+        "Buffer Audio",
+        "Chunk Stored",
+        "Speech-to-Text",
+        "Transcript",
+        "Decision Call",
+        "Intent Result",
+        "LLM Reasoning",
+        "Teacher Reply",
+        "Voice Synthesize",
+        "Audio Ready",
+        "Audio Return"
+      ],
+      "missing": []
+    },
+    "case-3": {
+      "expected": 12,
+      "seen": [
+        "Fetch Persona",
+        "Persona Config",
+        "Load Persona",
+        "Persona Doc",
+        "Fetch Rubrics",
+        "Rubric Set",
+        "Cache Context",
+        "Cached",
+        "Decision Inject",
+        "Directive Ack",
+        "Bridge Prompt",
+        "Bridge Text"
+      ],
+      "missing": []
+    },
+    "case-4": {
+      "expected": 7,
+      "seen": [
+        "Finish Session",
+        "Drain Buffer",
+        "Audio Chunks",
+        "Upload R2",
+        "Object Stored",
+        "Notify Done",
+        "Audio Linked"
+      ],
+      "missing": []
+    },
+    "case-5": {
+      "expected": 7,
+      "seen": [
+        "Save Outbox",
+        "Row Saved",
+        "Publish Event",
+        "Class Sync",
+        "Push Alert",
+        "Event ACK"
+      ],
+      "missing": []
+    }
+  },
+  "failures": []
+}
