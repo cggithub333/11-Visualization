@@ -1,6 +1,6 @@
 /**
  * ESPP Full Microservice Architecture Visualizer (Diagram 3) Stylesheet
- * 4-Tier Semantic Grid, Microservice Node Cards, Animated Packets, Telemetry
+ * Hand-Drawn Topology Layout & Adaptive Context Node Styling
  */
 
 .full-arch-viewport {
@@ -16,7 +16,7 @@
   border-radius: 12px;
   border: 1px solid #1e293b;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.6);
-  padding: 18px 18px 22px 18px;
+  padding: 18px 20px 24px 20px;
   box-sizing: border-box;
   transition: min-width 0.3s ease;
 }
@@ -39,18 +39,9 @@
 }
 
 .full-arch-viewport.view-100 .full-arch-grid {
-  min-width: 1480px;
+  min-width: 1440px;
   max-width: 1680px;
   margin: 0 auto;
-  gap: 44px;
-}
-
-.full-arch-viewport.view-100 .tier-services {
-  gap: 14px;
-}
-
-.full-arch-viewport.view-100 .tier-services .mvc-card {
-  min-width: 195px;
 }
 
 /* Header & Scenario Toolbar */
@@ -62,7 +53,7 @@
   gap: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   z-index: 20;
 }
 
@@ -103,15 +94,6 @@
   gap: 8px;
 }
 
-.case-selector {
-  display: flex;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  padding: 3px;
-  gap: 2px;
-}
-
 .use-case-select {
   background: #0f172a;
   border: 1px solid #334155;
@@ -130,31 +112,6 @@
 .use-case-select:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 8px rgba(59, 130, 246, 0.3);
-}
-
-.case-btn {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  font-size: 0.78rem;
-  font-weight: 500;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-}
-
-.case-btn:hover {
-  color: #f8fafc;
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.case-btn.active {
-  background: #3b82f6;
-  color: #ffffff;
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.4);
 }
 
 .player-controls {
@@ -252,50 +209,39 @@
 .btn-send-request:hover {
   background: #0369a1;
   border-color: #38bdf8;
-  color: #ffffff;
-}
-
-.btn-send-request:active {
-  transform: translateY(1px);
 }
 
 .btn-send-request.sending {
-  background: #0891b2;
-  border-color: #22d3ee;
-  box-shadow: 0 0 12px rgba(34, 211, 238, 0.4);
+  background: #075985;
+  opacity: 0.85;
 }
 
 .btn-batch-toggle {
   background: #0284c7;
   border: 1px solid #0ea5e9;
   color: #ffffff;
-  font-size: 0.8rem;
   padding: 6px 8px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
   transition: all 0.15s ease;
 }
 
 .btn-batch-toggle:hover {
   background: #0369a1;
-  border-color: #38bdf8;
 }
 
 .dropdown-arch-batch {
   position: absolute;
   top: calc(100% + 4px);
-  right: 0;
+  left: 0;
   background: #0f172a;
   border: 1px solid #334155;
-  border-radius: 8px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6);
+  border-radius: 6px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
   padding: 4px;
   z-index: 50;
-  min-width: 165px;
+  min-width: 140px;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -349,428 +295,19 @@
   color: #38bdf8;
 }
 
-/* MVC Card Architecture */
-.mvc-card {
-  display: flex;
-  flex-direction: column;
-  padding: 0 !important;
-  overflow: hidden;
-  border-radius: 10px;
-  background: #0b1324;
-  border: 1px solid #1e293b;
-  min-width: 175px;
-  max-width: 215px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transition: all 0.25s ease;
-}
+/* ==========================================================================
+   Topology Canvas & Spatial Zone Layout (Matching Hand-Drawn Architecture)
+   ========================================================================== */
 
-.mvc-card-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  gap: 4px;
-}
-
-.mvc-card-header .service-name {
-  font-size: 0.77rem;
-  margin-bottom: 0;
-}
-
-/* MVC Triad Stage (Icon-Only Subcomponent Interaction Stage) */
-.mvc-triad-stage {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  background: rgba(15, 23, 42, 0.55);
-  position: relative;
-  overflow: hidden;
-}
-
-/* MVC Subnodes Base (Calm Idle Gray State) */
-.mvc-subnode {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  flex-shrink: 0;
-  transition: all 0.35s ease;
-  position: relative;
-  z-index: 2;
-  color: #64748b;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  box-shadow: none;
-  transform: scale(1.0);
-}
-
-.mvc-icon-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-/* Default/Idle Muted State for All 3 MVC Subnodes */
-.mvc-subnode-view,
-.mvc-service,
-.mvc-subnode-controller,
-.mvc-controller,
-.mvc-subnode-model,
-.mvc-model {
-  color: #64748b;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(148, 163, 184, 0.15);
-  box-shadow: none;
-  transform: scale(1.0);
-  transition: all 0.35s ease;
-}
-
-/* Manual Inspection Hover Effects */
-.mvc-subnode-view:hover {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.18);
-  border-color: #38bdf8;
-  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
-  transform: scale(1.08);
-}
-
-.mvc-subnode-controller:hover {
-  color: #a78bfa;
-  background: rgba(99, 102, 241, 0.28);
-  border-color: #c084fc;
-  box-shadow: 0 0 14px rgba(168, 85, 247, 0.6);
-  transform: scale(1.12);
-}
-
-.mvc-subnode-model:hover {
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.18);
-  border-color: #34d399;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
-  transform: scale(1.08);
-}
-
-/* Active Service Node Subnode Illumination (ONLY when visited by request or active) */
-.service-node[class*="node-active"] .mvc-subnode-view,
-.triad-animating .mvc-subnode-view {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.12);
-  border-color: rgba(56, 189, 248, 0.4);
-  box-shadow: 0 0 8px rgba(56, 189, 248, 0.3);
-}
-
-.service-node[class*="node-active"] .mvc-subnode-controller,
-.triad-animating .mvc-subnode-controller {
-  color: #a78bfa;
-  background: rgba(99, 102, 241, 0.2);
-  border-color: rgba(167, 139, 250, 0.5);
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
-  transform: scale(1.06);
-}
-
-.service-node[class*="node-active"] .mvc-subnode-model,
-.triad-animating .mvc-subnode-model {
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.12);
-  border-color: rgba(52, 211, 153, 0.4);
-  box-shadow: 0 0 8px rgba(16, 185, 129, 0.3);
-}
-
-.service-node[class*="node-active"] .mvc-bus,
-.triad-animating .mvc-bus {
-  background: rgba(148, 163, 184, 0.24);
-}
-
-/* MVC Internal Signal Bus: View <-> Controller <-> Model (Zero direct View-Model connection) */
-.mvc-bus {
-  flex: 1;
-  height: 2px;
-  background: rgba(148, 163, 184, 0.12);
-  position: relative;
-  margin: 0 4px;
-  min-width: 10px;
-  transition: background 0.35s ease;
-}
-
-.mvc-bus-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: inherit;
-}
-
-/* Inactive pulse dots: MUST NOT animate continuously across all 16 cards when idle */
-.mvc-bus-pulse {
-  position: absolute;
-  top: -3px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-/* Pulse dots ONLY animate and display when active or during animation */
-.triad-animating .mvc-bus-view-ctrl .mvc-bus-pulse {
-  opacity: 1;
-  background: #38bdf8;
-  box-shadow: 0 0 6px #38bdf8;
-  animation: busTravelViewCtrl 1.1s ease-in-out infinite;
-}
-
-.triad-animating .mvc-bus-ctrl-model .mvc-bus-pulse {
-  opacity: 1;
-  background: #34d399;
-  box-shadow: 0 0 6px #34d399;
-  animation: busTravelCtrlModel 1.1s ease-in-out infinite;
-  animation-delay: 0.55s;
-}
-
-@keyframes busTravelViewCtrl {
-  0% { left: 0%; transform: scale(0.8); opacity: 0.3; }
-  45% { left: calc(100% - 8px); transform: scale(1.2); opacity: 1; }
-  55% { left: calc(100% - 8px); transform: scale(1.2); opacity: 1; }
-  100% { left: 0%; transform: scale(0.8); opacity: 0.3; }
-}
-
-@keyframes busTravelCtrlModel {
-  0% { left: 0%; transform: scale(1.2); opacity: 1; }
-  45% { left: calc(100% - 8px); transform: scale(0.8); opacity: 0.3; }
-  55% { left: calc(100% - 8px); transform: scale(0.8); opacity: 0.3; }
-  100% { left: 0%; transform: scale(1.2); opacity: 1; }
-}
-
-/* Active Simulation Mediation Animation on Triad Stage */
-.triad-animating .mvc-subnode-controller {
-  animation: controllerMediatePulse 0.9s ease-in-out 2;
-}
-
-@keyframes controllerMediatePulse {
-  0% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.4); transform: scale(1.05); }
-  50% { box-shadow: 0 0 18px rgba(168, 85, 247, 0.9), 0 0 6px #a78bfa; transform: scale(1.22); }
-  100% { box-shadow: 0 0 8px rgba(99, 102, 241, 0.4); transform: scale(1.05); }
-}
-
-/* Exact Internal MVC Lifecycle Sequence:
- * Phase 1: Controller (.mvc-subnode-controller) glows as inbound request arrives
- * Phase 2: Signal pulses across right bus to Model (.mvc-subnode-model), Model glows
- * Phase 3: Signal pulses back across right bus to Controller, Controller glows
- * Phase 4: Signal pulses across left bus to View (.mvc-subnode-view), View glows
- * Phase 5: Signal pulses back across left bus to Controller, Controller glows
- * Phase 6: Controller emits external network line/packet to target service
- */
-
-/* Phase 1: Inbound request arrives at Controller */
-.mvc-phase-1 .mvc-subnode-controller {
-  transform: scale(1.22) !important;
-  box-shadow: 0 0 18px rgba(168, 85, 247, 0.95), 0 0 6px #c084fc !important;
-  border-color: #c084fc !important;
-  color: #ffffff !important;
-  background: rgba(168, 85, 247, 0.4) !important;
-}
-
-/* Phase 2: Controller -> Model (Right bus pulse moves right, Model glows) */
-.mvc-phase-2 .mvc-bus-ctrl-model {
-  background: rgba(52, 211, 153, 0.4) !important;
-}
-.mvc-phase-2 .mvc-bus-ctrl-model .mvc-bus-pulse {
-  animation: none !important;
-  left: calc(100% - 8px) !important;
-  background: #34d399 !important;
-  box-shadow: 0 0 10px #34d399 !important;
-  transform: scale(1.3) !important;
-  opacity: 1 !important;
-  transition: left 0.12s linear !important;
-}
-.mvc-phase-2 .mvc-subnode-model {
-  transform: scale(1.22) !important;
-  box-shadow: 0 0 18px rgba(16, 185, 129, 0.95), 0 0 6px #34d399 !important;
-  border-color: #34d399 !important;
-  color: #ffffff !important;
-  background: rgba(16, 185, 129, 0.4) !important;
-}
-
-/* Phase 3: Model -> Controller (Right bus pulse moves back to Controller, Controller glows) */
-.mvc-phase-3 .mvc-bus-ctrl-model {
-  background: rgba(168, 85, 247, 0.4) !important;
-}
-.mvc-phase-3 .mvc-bus-ctrl-model .mvc-bus-pulse {
-  animation: none !important;
-  left: 0% !important;
-  background: #a855f7 !important;
-  box-shadow: 0 0 10px #a855f7 !important;
-  transform: scale(1.3) !important;
-  opacity: 1 !important;
-  transition: left 0.12s linear !important;
-}
-.mvc-phase-3 .mvc-subnode-controller {
-  transform: scale(1.22) !important;
-  box-shadow: 0 0 18px rgba(168, 85, 247, 0.95), 0 0 6px #c084fc !important;
-  border-color: #c084fc !important;
-  color: #ffffff !important;
-  background: rgba(168, 85, 247, 0.4) !important;
-}
-
-/* Phase 4: Controller -> View (Left bus pulse moves left to View, View glows) */
-.mvc-phase-4 .mvc-bus-view-ctrl {
-  background: rgba(56, 189, 248, 0.4) !important;
-}
-.mvc-phase-4 .mvc-bus-view-ctrl .mvc-bus-pulse {
-  animation: none !important;
-  left: 0% !important;
-  background: #38bdf8 !important;
-  box-shadow: 0 0 10px #38bdf8 !important;
-  transform: scale(1.3) !important;
-  opacity: 1 !important;
-  transition: left 0.12s linear !important;
-}
-.mvc-phase-4 .mvc-subnode-view {
-  transform: scale(1.22) !important;
-  box-shadow: 0 0 18px rgba(56, 189, 248, 0.95), 0 0 6px #38bdf8 !important;
-  border-color: #38bdf8 !important;
-  color: #ffffff !important;
-  background: rgba(56, 189, 248, 0.4) !important;
-}
-
-/* Phase 5: View -> Controller (Left bus pulse returns right to Controller, Controller glows) */
-.mvc-phase-5 .mvc-bus-view-ctrl {
-  background: rgba(168, 85, 247, 0.4) !important;
-}
-.mvc-phase-5 .mvc-bus-view-ctrl .mvc-bus-pulse {
-  animation: none !important;
-  left: calc(100% - 8px) !important;
-  background: #a855f7 !important;
-  box-shadow: 0 0 10px #a855f7 !important;
-  transform: scale(1.3) !important;
-  opacity: 1 !important;
-  transition: left 0.12s linear !important;
-}
-.mvc-phase-5 .mvc-subnode-controller {
-  transform: scale(1.22) !important;
-  box-shadow: 0 0 18px rgba(168, 85, 247, 0.95), 0 0 6px #c084fc !important;
-  border-color: #c084fc !important;
-  color: #ffffff !important;
-  background: rgba(168, 85, 247, 0.4) !important;
-}
-
-/* Phase 6: Controller emits external network line/packet */
-.mvc-phase-6 .mvc-subnode-controller {
-  transform: scale(1.28) !important;
-  box-shadow: 0 0 22px rgba(56, 189, 248, 1), 0 0 8px #38bdf8 !important;
-  border-color: #38bdf8 !important;
-  color: #ffffff !important;
-  background: rgba(56, 189, 248, 0.5) !important;
-}
-
-/* Compact Clean Footer */
-.mvc-card-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 5px 10px;
-  background: rgba(15, 23, 42, 0.7);
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  font-size: 0.67rem;
-  color: #94a3b8;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  gap: 6px;
-}
-
-.mvc-card-footer span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Lucide Icon integration */
-.service-icon svg,
-.mvc-card-header svg,
-.btn-ctrl svg {
-  display: inline-block;
-  vertical-align: middle;
-}
-
-/* Protocol & Enterprise Technical Badges */
-.badge-protocol {
-  display: inline-flex;
-  align-items: center;
-  font-size: 0.62rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.05);
-  color: #cbd5e1;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.badge-iam {
-  color: #38bdf8;
-  background: rgba(56, 189, 248, 0.1);
-  border-color: rgba(56, 189, 248, 0.3);
-}
-
-.badge-storage {
-  color: #f97316;
-  background: rgba(249, 115, 22, 0.1);
-  border-color: rgba(249, 115, 22, 0.3);
-}
-
-.badge-decision {
-  color: #a855f7;
-  background: rgba(168, 85, 247, 0.1);
-  border-color: rgba(168, 85, 247, 0.3);
-}
-
-.badge-broker {
-  color: #f43f5e;
-  background: rgba(244, 63, 94, 0.1);
-  border-color: rgba(244, 63, 94, 0.3);
-}
-
-.badge-llm {
-  color: #ec4899;
-  background: rgba(236, 72, 153, 0.1);
-  border-color: rgba(236, 72, 153, 0.3);
-}
-
-.badge-sql {
-  color: #3b82f6;
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-.badge-nosql {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.1);
-  border-color: rgba(16, 185, 129, 0.3);
-}
-
-/* Main 4-Tier Semantic Grid */
 .full-arch-grid {
   position: relative;
-  display: grid;
-  grid-template-rows: auto auto auto auto;
-  gap: 36px;
+  width: 100%;
   flex: 1;
   z-index: 10;
+  padding: 8px 4px;
 }
 
-/* SVG Connection Overlay */
+/* Fullscreen SVG Overlay for Connection Rails & Signal Packets */
 .full-arch-svg-overlay {
   position: absolute;
   top: 0;
@@ -781,19 +318,293 @@
   z-index: 5;
 }
 
+.arch-topology-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+  z-index: 10;
+}
+
+/* Upper Zone: Ingress (left) | Gateway Hub (mid) | Microservices & DBs (right) */
+.arch-upper-zone {
+  display: grid;
+  grid-template-columns: 190px 220px 1fr;
+  gap: 24px;
+  align-items: center;
+  width: 100%;
+}
+
+.ingress-subzone {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  justify-content: center;
+}
+
+.gateway-hub-subzone {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  justify-content: center;
+  align-items: center;
+}
+
+.services-db-stack-subzone {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.service-db-pair-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: center;
+}
+
+/* Mid Zone: Harness Voice Orchestrator & Storage Pair */
+.arch-mid-zone {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 2px;
+}
+
+.harness-storage-pair-row {
+  display: grid;
+  grid-template-columns: 280px 280px;
+  gap: 28px;
+  justify-content: center;
+  align-items: center;
+}
+
+/* AI Zone: STT (left) | Decision -> LLM (center) | TTS (right) */
+.arch-ai-zone {
+  display: grid;
+  grid-template-columns: 240px 280px 240px;
+  gap: 32px;
+  justify-content: center;
+  align-items: start;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.decision-llm-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+/* ==========================================================================
+   Adaptive Context Node Styling (.context-draggable-node & .service-node)
+   ========================================================================== */
+
+.context-draggable-node,
+.service-node {
+  background: #11151e;
+  border: 1px solid #252e3e;
+  border-radius: 0.625rem;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+  padding: 10px 14px;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.25s ease;
+  user-select: none;
+  cursor: pointer;
+  position: relative;
+  z-index: 12;
+  box-sizing: border-box;
+}
+
+.context-draggable-node:hover,
+.service-node:hover {
+  border-color: #4b5e7d;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+}
+
+/* Card Header & Content Typography */
+.node-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.node-title-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.node-title {
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-port {
+  font-size: 0.62rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.node-subtitle {
+  font-size: 0.70rem;
+  color: #cbd5e1;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-desc {
+  font-size: 0.62rem;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Badges for IAM, Broker, Storage */
+.badge-protocol {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.60rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge-iam {
+  color: #fbbf24;
+  background: rgba(251, 191, 36, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.badge-storage {
+  color: #f97316;
+  background: rgba(249, 115, 22, 0.1);
+  border-color: rgba(249, 115, 22, 0.3);
+}
+
+.badge-decision {
+  color: #c084fc;
+  background: rgba(192, 132, 252, 0.1);
+  border-color: rgba(192, 132, 252, 0.3);
+}
+
+.badge-broker {
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.1);
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+.badge-llm {
+  color: #e879f9;
+  background: rgba(232, 121, 249, 0.1);
+  border-color: rgba(232, 121, 249, 0.3);
+}
+
+.badge-sql {
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border-color: rgba(56, 189, 248, 0.3);
+}
+
+.badge-nosql {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.r2-badge {
+  font-size: 0.60rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.r2-badge.uploaded {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border-color: rgba(16, 185, 129, 0.4);
+}
+
+/* Active Glowing Node Highlight States (Identical to Adaptive Context) */
+.node-active,
+.node-active-purple {
+  border-color: #c084fc !important;
+  box-shadow: 0 0 20px rgba(192, 132, 252, 0.6) !important;
+  transform: translateY(-2px);
+}
+
+.node-active-emerald {
+  border-color: #10b981 !important;
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.6) !important;
+  transform: translateY(-2px);
+}
+
+.node-active-blue {
+  border-color: #60a5fa !important;
+  box-shadow: 0 0 20px rgba(96, 165, 250, 0.6) !important;
+  transform: translateY(-2px);
+}
+
+.node-active-cyan {
+  border-color: #22d3ee !important;
+  box-shadow: 0 0 20px rgba(34, 211, 238, 0.6) !important;
+  transform: translateY(-2px);
+}
+
+.node-active-amber {
+  border-color: #fbbf24 !important;
+  box-shadow: 0 0 20px rgba(251, 191, 36, 0.6) !important;
+  transform: translateY(-2px);
+}
+
+/* ==========================================================================
+   SVG Connection Paths & Moving Protocol Signal Packets
+   ========================================================================== */
+
 .arch-path {
   fill: none;
   stroke: rgba(100, 116, 139, 0.14);
-  stroke-width: 1px;
+  stroke-width: 1.5;
   stroke-dasharray: 3 3;
   transition: stroke 0.3s ease, stroke-width 0.3s ease, filter 0.3s ease;
 }
 
 .arch-path-active {
-  stroke: #38bdf8;
-  stroke-width: 2.5;
-  stroke-dasharray: none;
-  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.8));
+  stroke: #38bdf8 !important;
+  stroke-width: 2.5 !important;
+  stroke-dasharray: none !important;
+  filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.8)) !important;
 }
 
 .arch-path-purple {
@@ -817,10 +628,14 @@
   filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.85)) !important;
 }
 
+/* Moving Signal Packet with Protocol Badge Pill */
+.moving-packet {
+  pointer-events: none;
+}
+
 .packet-dot {
   fill: #38bdf8;
   filter: drop-shadow(0 0 8px #38bdf8);
-  pointer-events: none;
 }
 
 .packet-dot-purple {
@@ -838,313 +653,69 @@
   filter: drop-shadow(0 0 8px #34d399);
 }
 
-/* Moving Packet SVG Group & Protocol Label Pill */
-.moving-packet {
-  pointer-events: none;
+.packet-label-pill {
+  fill: rgba(15, 23, 42, 0.94);
+  stroke: currentColor;
+  stroke-width: 1;
 }
 
-.moving-packet rect {
-  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.75));
-}
-
-.moving-packet text {
+.packet-label-text {
+  font-size: 8.5px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  pointer-events: none;
-}
-
-/* Tier Containers & Balanced Alignment */
-.tier-row {
-  display: flex;
-  align-items: center;
-  position: relative;
-}
-
-.tier-label {
-  position: absolute;
-  left: -12px;
-  top: 50%;
-  transform: translateY(-50%) rotate(-90deg);
-  font-size: 0.65rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: #475569;
-  pointer-events: none;
+  fill: #f1f5f9;
+  text-anchor: middle;
+  dominant-baseline: central;
 }
 
-.tier-ingress {
-  justify-content: center;
-  gap: 28px;
-}
+/* ==========================================================================
+   Telemetry Status Panel
+   ========================================================================== */
 
-.tier-ingress .mvc-card {
-  width: 240px;
-  min-width: 210px;
-  max-width: 250px;
-}
-
-.tier-services {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 10px;
-  width: 100%;
-}
-
-.tier-services .mvc-card {
-  min-width: 0;
-  max-width: 100%;
-  width: 100%;
-}
-
-.tier-services .mvc-card-header {
-  padding: 5px 6px;
-  gap: 3px;
-}
-
-.tier-services .service-name {
-  font-size: 0.70rem;
-  letter-spacing: -0.02em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.tier-services .service-port {
-  font-size: 0.60rem;
-  padding: 1px 3px;
-  flex-shrink: 0;
-}
-
-.tier-services .badge-broker {
-  font-size: 0.58rem;
-  padding: 1px 3px;
-  flex-shrink: 0;
-}
-
-.tier-storage {
-  justify-content: center;
-  gap: 28px;
-}
-
-.tier-storage .mvc-card {
-  width: 240px;
-  min-width: 210px;
-  max-width: 250px;
-}
-
-.tier-ai {
-  justify-content: center;
-  gap: 28px;
-}
-
-.tier-ai .mvc-card {
-  width: 240px;
-  min-width: 210px;
-  max-width: 250px;
-}
-
-/* Service Node Cards */
-.service-node {
-  background: #0b1324;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 12px 14px;
-  min-width: 140px;
-  max-width: 190px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transition: all 0.25s ease;
-  position: relative;
-  z-index: 12;
-  cursor: default;
-}
-
-.service-node:hover {
-  border-color: #3b82f6;
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.25);
-}
-
-.service-node-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
-}
-
-.service-icon {
-  font-size: 1.1rem;
-}
-
-.service-port {
-  font-size: 0.68rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  background: rgba(255, 255, 255, 0.06);
-  color: #94a3b8;
-  padding: 1px 6px;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.service-name {
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #f1f5f9;
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.service-desc {
-  font-size: 0.72rem;
-  color: #64748b;
-  line-height: 1.3;
-}
-
-/* Specific Node Themes & Glowing Active States */
-.node-active-amber {
-  border-color: #f59e0b !important;
-  box-shadow: 0 0 16px rgba(245, 158, 11, 0.4) !important;
-  background: #141724 !important;
-}
-
-.node-active-emerald {
-  border-color: #10b981 !important;
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.45) !important;
-  background: #091d1a !important;
-}
-
-.node-active-purple {
-  border-color: #a855f7 !important;
-  box-shadow: 0 0 20px rgba(168, 85, 247, 0.6) !important;
-  background: #1a0f2e !important;
-}
-
-.node-active-cyan {
-  border-color: #06b6d4 !important;
-  box-shadow: 0 0 16px rgba(6, 182, 212, 0.45) !important;
-  background: #091c26 !important;
-}
-
-.node-active-blue {
-  border-color: #3b82f6 !important;
-  box-shadow: 0 0 16px rgba(59, 130, 246, 0.45) !important;
-  background: #0b1a36 !important;
-}
-
-/* Audio Buffer Pill on Redis Node */
-.audio-buffer-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #fbbf24;
-  background: rgba(245, 158, 11, 0.15);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  padding: 2px 7px;
-  border-radius: 9999px;
-  margin-top: 6px;
-  transition: all 0.2s ease;
-}
-
-.audio-buffer-pill.pulsing {
-  animation: bufferPulse 1s infinite alternate;
-}
-
-@keyframes bufferPulse {
-  0% { transform: scale(0.97); box-shadow: 0 0 4px rgba(245, 158, 11, 0.2); }
-  100% { transform: scale(1.03); box-shadow: 0 0 10px rgba(245, 158, 11, 0.6); }
-}
-
-/* Cloudflare R2 Status Badge */
-.r2-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #f97316;
-  background: rgba(249, 115, 22, 0.15);
-  border: 1px solid rgba(249, 115, 22, 0.3);
-  padding: 2px 7px;
-  border-radius: 9999px;
-  margin-top: 6px;
-}
-
-.r2-badge.uploaded {
-  color: #10b981;
-  background: rgba(16, 185, 129, 0.15);
-  border-color: rgba(16, 185, 129, 0.4);
-}
-
-/* RabbitMQ Outbox Envelope Badge */
-.amqp-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 0.68rem;
-  font-weight: 600;
-  color: #e11d48;
-  background: rgba(225, 29, 72, 0.15);
-  border: 1px solid rgba(225, 29, 72, 0.3);
-  padding: 2px 7px;
-  border-radius: 9999px;
-  margin-top: 6px;
-}
-
-/* Live Telemetry Inspector Card */
 .telemetry-panel {
-  background: #090e1a;
-  border: 1px solid #1e293b;
-  border-radius: 10px;
-  padding: 12px 18px;
-  margin-top: 20px;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 12px;
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-top: 14px;
   z-index: 20;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
 }
 
 .telemetry-step-info {
   display: flex;
   flex-direction: column;
-  gap: 3px;
-  min-width: 220px;
+  gap: 2px;
 }
 
 .telemetry-badge {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: #38bdf8;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
 }
 
 .telemetry-desc {
-  font-size: 0.83rem;
-  color: #cbd5e1;
-  font-weight: 500;
+  font-size: 0.78rem;
+  color: #f1f5f9;
 }
 
 .telemetry-data-box {
-  flex: 1;
-  background: #050811;
-  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: #090d16;
+  border: 1px solid #1e293b;
   border-radius: 6px;
-  padding: 8px 12px;
+  padding: 6px 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
-  color: #a5f3fc;
-  overflow-x: auto;
+  font-size: 0.72rem;
+  color: #34d399;
+  max-width: 480px;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1152,41 +723,65 @@
   display: flex;
   align-items: center;
   gap: 16px;
-  font-size: 0.78rem;
 }
 
 .metric-item {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
+  gap: 1px;
 }
 
 .metric-label {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: #64748b;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .metric-val {
+  font-size: 0.76rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-weight: 700;
-  color: #34d399;
+  font-weight: 600;
+  color: #38bdf8;
 }
 
-/* Responsive adjustment */
-@media (max-width: 1024px) {
-  .tier-row {
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-  .service-node {
-    min-width: 130px;
-  }
-  .telemetry-panel {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .telemetry-metrics {
-    justify-content: flex-end;
-  }
+/* Audio Buffer Pill */
+.audio-buffer-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.7rem;
+  color: #38bdf8;
+}
+
+/* Architectural Compatibility Classes */
+.tier-ingress,
+.tier-services,
+.tier-storage,
+.tier-ai,
+.mvc-card,
+.mvc-controller,
+.mvc-service,
+.mvc-model,
+.mvc-phase-1 {
+  /* Topology mappings */
+}
+
+/* Calm Idle Subnodes & Inactive Buses */
+.mvc-subnode {
+  color: #64748b;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+
+.mvc-bus-line {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+/* Hidden Model-View-Controller Subnodes (Temporary Hide as requested) */
+.mvc-triad-stage,
+.mvc-subnode,
+.mvc-bus {
+  display: none !important;
 }

@@ -1,19 +1,24 @@
 /**
  * ESPP Full Microservice Architecture Simulation Engine (UMD-Lite)
  * Architecture Visualizer Hub (Diagram 3)
+ * Redesigned to match the hand-drawn architecture topology and adaptive-context card styling
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) {
-    const exported = factory(
-      require('../../core/registry.js'),
-      require('./template.js')
-    );
+    let DiagramRegistry;
+    let FullArchTemplate;
+    try { DiagramRegistry = require('../../core/registry.js'); } catch (e) {}
+    try { FullArchTemplate = require('./template.js'); } catch (e) {}
+    if (typeof globalThis !== 'undefined' && globalThis.DiagramRegistry && !DiagramRegistry) {
+      DiagramRegistry = globalThis.DiagramRegistry;
+    }
+    const exported = factory(DiagramRegistry, FullArchTemplate);
     module.exports = exported;
     module.exports.FullArchitectureSimulation = exported.FullArchitectureSimulation;
     module.exports.default = exported;
   } else {
-    const exported = factory(root.DiagramRegistry, root.FullArchTemplate);
-    root.FullArchitectureSimulation = exported.FullArchitectureSimulation;
+    const exports = factory(root.DiagramRegistry, root.FullArchTemplate);
+    root.FullArchitectureSimulation = exports.FullArchitectureSimulation;
   }
 })(typeof self !== 'undefined' ? self : this, function (DiagramRegistry, FullArchTemplate) {
   'use strict';
@@ -25,48 +30,57 @@
       steps: [
         {
           source: 'web-client',
-          target: 'apisix',
+          target: 'reverse-proxy',
           protocol: 'HTTPS',
           method: 'POST /api/v1/session/start',
-          latency: '4.2 ms',
-          desc: 'Student initiates speaking session; APISIX verifies JWT via Entra JWKS',
+          latency: '2.1 ms',
+          desc: 'Student initiates speaking session from browser; hits TLS Reverse Proxy',
           payload: '{"studentId": "std_9821", "action": "start_session", "device": "chrome_122"}'
         },
         {
-          source: 'apisix',
-          target: 'harness',
+          source: 'reverse-proxy',
+          target: 'apisix',
           protocol: 'HTTP/2',
-          method: 'POST /sessions/init',
-          latency: '12.5 ms',
-          desc: 'APISIX routes request to Service-Harness orchestrator',
-          payload: '{"externalSessionId": "sess_842a1", "studentId": "std_9821", "auth": "valid"}'
+          method: 'PROXY /api/v1/session/start',
+          latency: '1.2 ms',
+          desc: 'Reverse Proxy terminates TLS and forwards internal HTTP/2 stream to APISIX Gateway',
+          payload: '{"proxy": "nginx-ingress", "upstream": "apisix:9080", "tls": "TLS_1_3"}'
         },
         {
-          source: 'harness',
-          target: 'curriculum',
-          protocol: 'REST',
-          method: 'GET /curriculum/syllabus/rubric',
-          latency: '18.2 ms',
-          desc: 'Harness fetches lesson rubric, topic guidelines, and target vocabulary',
-          payload: '{"lessonId": "les_a2_04", "rubric": "CEFR_B1", "targetTurnCount": 8}'
+          source: 'apisix',
+          target: 'iam',
+          protocol: 'JWT Bearer',
+          method: 'OIDC Token Validation',
+          latency: '3.8 ms',
+          desc: 'APISIX verifies JWT token signature against Microsoft Entra ID JWKS endpoint',
+          payload: '{"iss": "login.microsoftonline.com", "aud": "espp-core", "status": "TOKEN_VALID"}'
         },
         {
-          source: 'harness',
+          source: 'apisix',
           target: 'session',
           protocol: 'REST',
           method: 'POST /sessions',
-          latency: '14.8 ms',
-          desc: 'Harness creates persistent session record in Service-Session (Spring Boot)',
-          payload: '{"externalId": "sess_842a1", "lessonId": "les_a2_04", "status": "IN_PROGRESS"}'
+          latency: '12.4 ms',
+          desc: 'APISIX routes authenticated request to Session Service to provision session state',
+          payload: '{"externalId": "sess_842a1", "studentId": "std_9821", "lessonId": "les_a2_04"}'
         },
         {
           source: 'session',
           target: 'postgres',
           protocol: 'Postgres',
           method: 'INSERT INTO session.sessions',
-          latency: '6.1 ms',
-          desc: 'Service-Session persists session state into PostgreSQL Supabase cluster',
+          latency: '5.2 ms',
+          desc: 'Session Service persists session record into PostgreSQL ACID cluster',
           payload: '{"schema": "session", "table": "sessions", "rowId": "sess_842a1", "status": "ACTIVE"}'
+        },
+        {
+          source: 'session',
+          target: 'harness',
+          protocol: 'REST',
+          method: 'POST /harness/session/init',
+          latency: '8.1 ms',
+          desc: 'Session Service signals Voice Harness to instantiate Turn FSM & audio buffers',
+          payload: '{"sessionId": "sess_842a1", "mode": "VOICE_INTERACTIVE", "targetTurns": 8}'
         }
       ]
     },
@@ -76,65 +90,74 @@
       steps: [
         {
           source: 'web-client',
-          target: 'apisix',
+          target: 'reverse-proxy',
           protocol: 'WebSocket',
           method: 'WS audio_chunk (AAC-ADTS)',
-          latency: '8.5 ms',
+          latency: '4.5 ms',
           desc: 'Student speaks into microphone; browser streams AAC-ADTS audio chunks via WebSocket',
           payload: '{"type": "audio_chunk", "codec": "aac-adts", "sampleRate": 24000, "bytes": 4096}'
         },
         {
+          source: 'reverse-proxy',
+          target: 'apisix',
+          protocol: 'WS Proxy',
+          method: 'WS Tunnel /ws/audio',
+          latency: '1.4 ms',
+          desc: 'Reverse Proxy forwards duplex WebSocket audio stream to APISIX Gateway',
+          payload: '{"tunnel": "duplex-ws", "seq": 14, "upstream": "apisix:9080"}'
+        },
+        {
           source: 'apisix',
           target: 'harness',
-          protocol: 'WS Proxy',
-          method: 'WS /ws/speech',
+          protocol: 'WebSocket',
+          method: 'WS /ws/speech_stream',
           latency: '2.1 ms',
-          desc: 'APISIX proxies real-time audio chunk to Service-Harness',
+          desc: 'APISIX streams audio chunks directly down to Voice Harness Orchestrator',
           payload: '{"proxy": "apisix", "downstream": "harness:8081", "chunkSeq": 14}'
         },
         {
           source: 'harness',
-          target: 'redis',
+          target: 'cloudflare-r2',
           protocol: 'RESP',
           method: 'LPUSH session:842a1:audio',
           latency: '1.8 ms',
-          desc: 'Harness buffers audio chunk into Redis (Zero-Disk in-memory ring buffer)',
+          desc: 'Harness buffers raw audio chunk into Redis RAM (Zero-Disk in-memory ring buffer)',
           payload: '{"key": "session:842a1:audio", "chunk": 14, "mode": "zero-disk-ram"}'
         },
         {
           source: 'harness',
           target: 'ai-voice',
-          protocol: 'gRPC/REST',
+          protocol: 'gRPC',
           method: 'POST /stt/transcribe',
           latency: '185.0 ms',
-          desc: 'Whisper STT converts speech stream into text transcript',
+          desc: 'Faster-Whisper STT converts real-time audio stream into text transcript',
           payload: '{"transcript": "I think electric cars are very good for the environment.", "confidence": 0.94}'
         },
         {
           source: 'harness',
           target: 'laya',
-          protocol: 'HTTP',
+          protocol: 'HTTP/2',
           method: 'POST /intent/classify',
           latency: '48.6 ms',
-          desc: 'Service-Laya (ModernBERT-Large 421M System 1) classifies turn intent in <70ms',
+          desc: 'Decision Server (ModernBERT 421M System 1) classifies turn intent in <70ms',
           payload: '{"intent": "OPINION_ARGUMENT", "relevance": 0.91, "cefrScore": "B1.2", "system1": true}'
         },
         {
-          source: 'harness',
+          source: 'laya',
           target: 'vllm',
           protocol: 'HTTP/REST',
           method: 'POST /v1/chat/completions',
           latency: '210.0 ms',
-          desc: 'vLLM Qwen 1.5B/7B AWQ (System 2) generates pedagogical spoken reply',
+          desc: 'LLM Server (Qwen 7B AWQ System 2) performs deep cognitive reasoning for teacher reply',
           payload: '{"role": "assistant", "reply": "That is a great point! How do you think battery disposal impacts that?"}'
         },
         {
           source: 'harness',
-          target: 'ai-voice',
+          target: 'tts',
           protocol: 'REST',
           method: 'POST /tts/synthesize',
           latency: '120.4 ms',
-          desc: 'Kokoro TTS synthesizes high-fidelity natural teacher voice stream',
+          desc: 'TTS Server (Kokoro TTS) synthesizes high-fidelity natural teacher voice stream',
           payload: '{"voice": "en_us_female", "speed": 1.0, "format": "aac", "durationMs": 3200}'
         },
         {
@@ -142,8 +165,8 @@
           target: 'web-client',
           protocol: 'WebSocket',
           method: 'WS bot_audio_chunk',
-          latency: '15.2 ms',
-          desc: 'Synthesized voice audio streamed back to student browser for immediate playback',
+          latency: '12.2 ms',
+          desc: 'Synthesized voice audio streamed back to student browser for immediate audio playback',
           payload: '{"event": "audio_playback", "bytes": 16384, "turnIndex": 3}'
         }
       ]
@@ -171,31 +194,40 @@
           payload: '{"persona": "Debater-B1", "directive": "SUB_CONTEXT_BRIDGE_ADVANCED", "protocol": "gRPC"}'
         },
         {
+          source: 'agent',
+          target: 'redis',
+          protocol: 'RESP',
+          method: 'HSET agent:842a1:context',
+          latency: '2.4 ms',
+          desc: 'Service-Agent updates Redis memory cache with new conversational context and personality',
+          payload: '{"persona": "Debater-B1", "subContext": "Public Transit", "ttl": 3600}'
+        },
+        {
           source: 'harness',
           target: 'curriculum',
           protocol: 'REST',
           method: 'GET /curriculum/subcontext/transit',
           latency: '14.2 ms',
-          desc: 'Harness fetches new lesson rubric & criteria for the transitioned subcontext',
+          desc: 'Harness fetches new lesson rubric & criteria from Service-Curriculum for the transitioned topic',
           payload: '{"subContext": "Public Transit", "keyPhrases": ["subway", "congestion", "eco-friendly"]}'
         },
         {
           source: 'harness',
-          target: 'session',
-          protocol: 'REST',
-          method: 'PATCH /sessions/842a1/context',
-          latency: '11.5 ms',
-          desc: 'Harness updates active subcontext state in Service-Session for progress tracking',
-          payload: '{"externalId": "sess_842a1", "subContext": "Public Transit", "switchedAtTurn": 5}'
+          target: 'laya',
+          protocol: 'HTTP',
+          method: 'POST /directive/inject',
+          latency: '12.8 ms',
+          desc: 'Harness injects compact <45 token transition directive into Decision Server',
+          payload: '{"directive": "[BRIDGE: validate_then_pivot -> subtopic: public_transit]"}'
         },
         {
-          source: 'harness',
+          source: 'laya',
           target: 'vllm',
-          protocol: 'HTTP',
-          method: 'POST /v1/chat/completions (Re-Prompt)',
-          latency: '195.0 ms',
-          desc: 'vLLM receives updated system prompt with Purple Glowing Burst transition bridge',
-          payload: '{"systemPrompt": "Bridge student into public transit: Speaking of electric cars...", "theme": "purple"}'
+          protocol: 'HTTP/REST',
+          method: 'POST /v1/chat/completions (Prefill Cache)',
+          latency: '140.0 ms',
+          desc: 'vLLM model server generates smooth transitional bridge prompt with zero hallucinations',
+          payload: '{"tokens": 38, "bridge": "Speaking of vehicles, how effective is the subway system in your city?"}'
         }
       ]
     },
@@ -214,7 +246,7 @@
         },
         {
           source: 'harness',
-          target: 'redis',
+          target: 'cloudflare-r2',
           protocol: 'RESP',
           method: 'LRANGE session:842a1:audio 0 -1',
           latency: '3.4 ms',
@@ -238,15 +270,6 @@
           latency: '188.5 ms',
           desc: 'Harness streams fragmented conversation.m4a directly to Cloudflare R2 bucket',
           payload: '{"bucket": "espp-audio", "key": "sessions/sess_842a1/conversation.m4a", "sizeKb": 745}'
-        },
-        {
-          source: 'harness',
-          target: 'redis',
-          protocol: 'RESP',
-          method: 'DEL session:842a1:audio',
-          latency: '1.2 ms',
-          desc: 'Redis buffer safely unlinked only AFTER Cloudflare R2 confirms upload success',
-          payload: '{"action": "DEL", "key": "session:842a1:audio", "status": "CLEARED"}'
         },
         {
           source: 'harness',
@@ -312,37 +335,43 @@
     }
   ];
 
+  // System Connections Matching Hand-Drawn Topology
   const CONNECTIONS = [
-    // Ingress Tier 1 -> Tier 1 & Tier 2
-    ['web-client', 'apisix'],
-    ['iam', 'apisix'],
-    ['apisix', 'harness'],
-    ['web-client', 'harness'],
+    // Ingress Pipeline (Left to Right)
+    ['web-client', 'reverse-proxy'],
+    ['reverse-proxy', 'apisix'],
 
-    // Tier 2 Services to Storage Tier 3 (Postgres & Redis)
-    ['harness', 'redis'],
-    ['harness', 'postgres'],
-    ['session', 'postgres'],
-    ['class', 'postgres'],
-    ['curriculum', 'postgres'],
+    // IAM Authentication (Vertical Upward)
+    ['apisix', 'iam'],
+
+    // Gateway Fan-Out to Microservices (Rightwards)
+    ['apisix', 'class'],
+    ['apisix', 'curriculum'],
+    ['apisix', 'agent'],
+    ['apisix', 'notification'],
+    ['apisix', 'session'],
+
+    // Microservices to their Dedicated Databases (Horizontal Straight)
+    ['class', 'db-class'],
+    ['curriculum', 'db-curriculum'],
     ['agent', 'redis'],
-    ['notification', 'postgres'],
-
-    // Tier 2 Services to Message Broker (RabbitMQ)
-    ['session', 'rabbitmq'],
-    ['class', 'rabbitmq'],
     ['notification', 'rabbitmq'],
+    ['session', 'postgres'],
 
-    // Tier 2 Internal orchestration
-    ['harness', 'curriculum'],
-    ['harness', 'session'],
-    ['harness', 'agent'],
+    // Ingress Gateway to Harness Voice Orchestrator (Downward)
+    ['apisix', 'harness'],
 
-    // External Storage & AI Servers to Harness
+    // Session Service to Harness (Vertical Bidirectional)
+    ['session', 'harness'],
+
+    // Harness to Harness Storage (Horizontal Right)
+    ['harness', 'cloudflare-r2'],
+
+    // Harness to AI Inference Cluster (Fanning Downwards)
     ['harness', 'ai-voice'],
-    ['cloudflare-r2', 'harness'],
-    ['laya', 'harness'],
-    ['vllm', 'harness']
+    ['harness', 'laya'],
+    ['laya', 'vllm'],
+    ['harness', 'tts']
   ];
 
   class FullArchitectureSimulation {
@@ -368,8 +397,34 @@
     }
 
     generateSquaredPath(x1, y1, x2, y2, yMid) {
-      const mid = typeof yMid === 'number' ? yMid : (y1 + y2) / 2;
+      if (y1 === y2) {
+        return `M ${x1} ${y1} L ${x2} ${y2}`;
+      }
+      if (x1 === x2) {
+        return `M ${x1} ${y1} L ${x2} ${y2}`;
+      }
+      const mid = typeof yMid === 'number' ? yMid : Math.round((y1 + y2) / 2);
       return `M ${x1} ${y1} L ${x1} ${mid} L ${x2} ${mid} L ${x2} ${y2}`;
+    }
+
+    getShortProtocolLabel(step) {
+      if (!step) return 'REQ';
+      const proto = (step.protocol || '').toUpperCase();
+      const method = (step.method || '').toUpperCase();
+
+      if (proto.includes('JWT') || method.includes('JWT') || proto.includes('OIDC')) return 'JWT';
+      if (proto.includes('WEBSOCKET') || proto.includes('WS')) return 'WS';
+      if (proto.includes('GRPC')) return 'gRPC';
+      if (proto.includes('RESP')) return 'RESP';
+      if (proto.includes('S3') || proto.includes('R2')) return 'S3';
+      if (proto.includes('AMQP')) return 'AMQP';
+      if (proto.includes('POSTGRES') || proto.includes('SQL')) return 'SQL';
+      if (proto.includes('IN-MEMORY') || method.includes('REMUX')) return 'REMUX';
+      if (proto.includes('HTTP/2')) return 'HTTP/2';
+      if (proto.includes('HTTPS')) return 'HTTPS';
+      if (proto.includes('REST')) return 'REST';
+      if (proto.includes('INTERNAL FSM') || method.includes('FSM')) return 'FSM';
+      return proto.slice(0, 6) || 'REQ';
     }
 
     init() {
@@ -379,9 +434,7 @@
       if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
         try {
           lucide.createIcons();
-        } catch (e) {
-          // Safe fallback in test or constrained environments
-        }
+        } catch (e) {}
       }
       this.bindDomEvents();
       if (typeof window !== 'undefined' && window.location) {
@@ -402,7 +455,6 @@
     }
 
     bindDomEvents() {
-      // Unified Scenario dropdown selector
       const caseSelect = document.getElementById('use-case-select');
       if (caseSelect) {
         caseSelect.addEventListener('change', (e) => {
@@ -410,7 +462,6 @@
         });
       }
 
-      // Unified Play Scenario button
       const playScenarioBtn = document.getElementById('btn-arch-play-scenario');
       if (playScenarioBtn) {
         playScenarioBtn.addEventListener('click', () => {
@@ -418,7 +469,6 @@
         });
       }
 
-      // Zoom Toggle (100% Expanded View / Fit Screen)
       const zoomBtn = document.getElementById('btn-arch-zoom');
       if (zoomBtn) {
         zoomBtn.addEventListener('click', () => {
@@ -426,7 +476,6 @@
         });
       }
 
-      // Send Request split button & batch dropdown
       const sendReqBtn = document.getElementById('btn-arch-send-request');
       if (sendReqBtn) {
         sendReqBtn.addEventListener('click', () => {
@@ -453,47 +502,20 @@
         });
       });
 
-      this.boundHandlers.documentClick = (e) => {
-        if (dropdownBatch && !dropdownBatch.contains(e.target) && e.target !== toggleBatchBtn) {
+      const resetBtn = document.getElementById('btn-arch-reset');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          this.reset();
+        });
+      }
+
+      this.boundHandlers.documentClick = () => {
+        if (dropdownBatch && !dropdownBatch.classList.contains('hidden')) {
           dropdownBatch.classList.add('hidden');
         }
       };
       document.addEventListener('click', this.boundHandlers.documentClick);
 
-      // Scenario buttons (backward compatibility)
-      const caseBtns = document.querySelectorAll('.case-btn');
-      caseBtns.forEach((btn) => {
-        btn.addEventListener('click', (e) => {
-          const caseId = e.currentTarget.getAttribute('data-case');
-          this.setCase(caseId);
-        });
-      });
-
-      // Controls (backward compatibility)
-      const playBtn = document.getElementById('btn-arch-play-pause');
-      if (playBtn) {
-        playBtn.addEventListener('click', () => {
-          this.togglePlayScenario();
-        });
-      }
-
-      const nextBtn = document.getElementById('btn-arch-step-next');
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-          this.pause();
-          this.stepNext();
-        });
-      }
-
-      const resetBtn = document.getElementById('btn-arch-reset');
-      if (resetBtn) {
-        resetBtn.addEventListener('click', () => {
-          this.pause();
-          this.reset();
-        });
-      }
-
-      // Keydown listener (Escape exits 100% view)
       this.boundHandlers.keydown = (e) => {
         if (e.key === 'Escape' && this.state.is100View) {
           this.toggleZoom();
@@ -501,35 +523,18 @@
       };
       document.addEventListener('keydown', this.boundHandlers.keydown);
 
-      // Resize listener
-      this.boundHandlers.resize = () => this.resize();
+      this.boundHandlers.resize = () => {
+        this.resize();
+      };
       window.addEventListener('resize', this.boundHandlers.resize);
     }
 
     setCase(caseId) {
-      const target = this.scenarios.find((s) => s.id === caseId);
-      if (!target) return;
-
-      this.state.activeCaseId = caseId;
-      this.state.stepIndex = 0;
-      this.state.audioChunksCount = caseId === 'case-4' ? 48 : (caseId === 'case-2' ? 14 : 0);
-      this.state.r2Uploaded = false;
-
-      if (!this.headless && typeof document !== 'undefined') {
-        // Sync unified dropdown selector
-        const caseSelect = document.getElementById('use-case-select');
-        if (caseSelect && caseSelect.value !== caseId) {
-          caseSelect.value = caseId;
-        }
-
-        // Update button active state
-        document.querySelectorAll('.case-btn').forEach((b) => {
-          if (b.getAttribute('data-case') === caseId) {
-            b.classList.add('active');
-          } else {
-            b.classList.remove('active');
-          }
-        });
+      if (this.state.activeCaseId !== caseId) {
+        this.pause();
+        this.state.activeCaseId = caseId;
+        this.state.stepIndex = 0;
+        this.clearMvcAnimations();
         this.renderCurrentState();
       }
     }
@@ -539,17 +544,15 @@
       const maxSteps = currentCase.steps.length;
 
       if (this.state.stepIndex >= maxSteps - 1) {
-        // Loop back or stop
         this.state.stepIndex = 0;
       } else {
         this.state.stepIndex += 1;
       }
 
-      // Update audio buffer counter logic
       if (this.state.activeCaseId === 'case-2') {
         this.state.audioChunksCount = 14 + (this.state.stepIndex * 2);
       } else if (this.state.activeCaseId === 'case-4') {
-        if (this.state.stepIndex >= 4) {
+        if (this.state.stepIndex >= 3) {
           this.state.audioChunksCount = 0;
           this.state.r2Uploaded = true;
         } else {
@@ -560,9 +563,27 @@
 
       if (!this.headless && typeof document !== 'undefined') {
         this.renderCurrentState();
+        this.executeStep(currentCase.steps[this.state.stepIndex]);
       }
 
       return currentCase.steps[this.state.stepIndex];
+    }
+
+    executeStep(step) {
+      if (this.headless || typeof document === 'undefined') return;
+      if (!step) {
+        const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
+        step = currentCase.steps[this.state.stepIndex];
+      }
+      if (!step) return;
+
+      const highlightClass = this.state.activeCaseId === 'case-3'
+        ? 'node-active-purple'
+        : (this.state.activeCaseId === 'case-4' ? 'node-active-amber' : 'node-active-cyan');
+
+      this.animateServiceMvcCycle(step.source, () => {
+        this.emitPacket(step.source, step.target, highlightClass);
+      });
     }
 
     togglePlayScenario() {
@@ -579,7 +600,7 @@
       if (this.state.timerId) clearInterval(this.state.timerId);
       this.state.timerId = setInterval(() => {
         this.stepNext();
-      }, 2800);
+      }, 2400);
       if (this.state.timerId && typeof this.state.timerId.unref === 'function') {
         this.state.timerId.unref();
       }
@@ -643,17 +664,6 @@
         this._activeMvcTimeouts = [];
       }
       if (!this.headless && typeof document !== 'undefined') {
-        document.querySelectorAll('.mvc-triad-stage').forEach((triad) => {
-          triad.classList.remove(
-            'mvc-phase-1',
-            'mvc-phase-2',
-            'mvc-phase-3',
-            'mvc-phase-4',
-            'mvc-phase-5',
-            'mvc-phase-6',
-            'triad-animating'
-          );
-        });
         const packetsGroup = document.getElementById('svg-packets-group');
         if (packetsGroup) {
           packetsGroup.innerHTML = '';
@@ -669,192 +679,95 @@
 
       return new Promise((resolve) => {
         const nodeEl = document.getElementById(`node-${nodeId}`);
-        if (!nodeEl) {
+        if (nodeEl) {
+          nodeEl.classList.add('node-active-cyan');
+          const t = setTimeout(() => {
+            nodeEl.classList.remove('node-active-cyan');
+            if (typeof callback === 'function') callback();
+            resolve();
+          }, 350);
+          this._activeMvcTimeouts = this._activeMvcTimeouts || [];
+          this._activeMvcTimeouts.push(t);
+        } else {
           if (typeof callback === 'function') callback();
           resolve();
-          return;
         }
-
-        const triad = nodeEl.querySelector('.mvc-triad-stage');
-        if (!triad) {
-          if (typeof callback === 'function') callback();
-          resolve();
-          return;
-        }
-
-        const phaseDur = 110;
-
-        const cleanup = () => {
-          triad.classList.remove(
-            'mvc-phase-1',
-            'mvc-phase-2',
-            'mvc-phase-3',
-            'mvc-phase-4',
-            'mvc-phase-5',
-            'mvc-phase-6'
-          );
-        };
-
-        cleanup();
-        // Phase 1: Controller (.mvc-subnode-controller) glows as inbound request arrives
-        triad.classList.add('mvc-phase-1');
-
-        const t1 = setTimeout(() => {
-          cleanup();
-          // Phase 2: Signal pulses across right bus to Model (.mvc-subnode-model), Model glows
-          triad.classList.add('mvc-phase-2');
-        }, phaseDur);
-
-        const t2 = setTimeout(() => {
-          cleanup();
-          // Phase 3: Signal pulses back across right bus to Controller, Controller glows
-          triad.classList.add('mvc-phase-3');
-        }, phaseDur * 2);
-
-        const t3 = setTimeout(() => {
-          cleanup();
-          // Phase 4: Signal pulses across left bus to View (.mvc-subnode-view), View glows
-          triad.classList.add('mvc-phase-4');
-        }, phaseDur * 3);
-
-        const t4 = setTimeout(() => {
-          cleanup();
-          // Phase 5: Signal pulses back across left bus to Controller, Controller glows
-          triad.classList.add('mvc-phase-5');
-        }, phaseDur * 4);
-
-        const t5 = setTimeout(() => {
-          cleanup();
-          // Phase 6: Controller emits external network line/packet to target service
-          triad.classList.add('mvc-phase-6');
-        }, phaseDur * 5);
-
-        const t6 = setTimeout(() => {
-          cleanup();
-          if (typeof callback === 'function') callback();
-          resolve();
-        }, phaseDur * 6 + 40);
-
-        this._activeMvcTimeouts = this._activeMvcTimeouts || [];
-        this._activeMvcTimeouts.push(t1, t2, t3, t4, t5, t6);
       });
     }
 
-    getShortProtocolLabel(step) {
-      if (!step) return '';
-      const proto = String(step.protocol || '').trim();
-      const method = String(step.method || '').trim();
-
-      if (/jwt/i.test(proto) || /jwt/i.test(method)) return 'JWT';
-      if (/websocket/i.test(proto) || /^ws\b/i.test(proto) || /^ws\b/i.test(method)) return 'WS';
-      if (/grpc/i.test(proto) || /grpc/i.test(method)) return 'gRPC';
-      if (/resp/i.test(proto)) return 'RESP';
-      if (/s3/i.test(proto) || /r2/i.test(proto)) return 'S3';
-      if (/amqp/i.test(proto)) return 'AMQP';
-      if (/postgres/i.test(proto) || /sql/i.test(proto)) return 'SQL';
-      if (/in-memory/i.test(proto) || /remux/i.test(method)) return 'REMUX';
-      if (/internal fsm/i.test(proto) || /fsm/i.test(proto)) return 'FSM';
-      if (/http\/2/i.test(proto)) return 'HTTP/2';
-      if (/https/i.test(proto)) return 'HTTPS';
-      if (/http/i.test(proto)) return 'HTTP';
-      if (/rest/i.test(proto)) return 'REST';
-
-      const token = proto.split(/[\s/]/)[0];
-      return (token.length > 8 ? token.slice(0, 8) : token) || 'DATA';
-    }
-
-    computePathCoordinates(srcId, tgtId, index = 0, gridRect = null) {
-      const grid = document.getElementById('full-arch-grid');
-      if (!grid) return null;
-      const gRect = gridRect || grid.getBoundingClientRect();
-
+    computePathCoordinates(srcId, tgtId, gRect) {
       const srcEl = document.getElementById(`node-${srcId}`);
       const tgtEl = document.getElementById(`node-${tgtId}`);
       if (!srcEl || !tgtEl) return null;
 
-      const srcRect = srcEl.getBoundingClientRect();
-      const tgtRect = tgtEl.getBoundingClientRect();
+      const s = srcEl.getBoundingClientRect();
+      const t = tgtEl.getBoundingClientRect();
 
-      const srcCenterX = Math.round(srcRect.left + srcRect.width / 2 - gRect.left);
-      const tgtCenterX = Math.round(tgtRect.left + tgtRect.width / 2 - gRect.left);
+      let x1, y1, x2, y2, yMid;
 
-      let x1 = srcCenterX;
-      let y1;
-      let x2 = tgtCenterX;
-      let y2;
-      let yMid;
-
-      // 1. Direct horizontal routing for Tier 1 adjacent nodes
+      // 1. Direct Horizontal Left-to-Right Pairs
       if (
-        (srcId === 'web-client' && tgtId === 'apisix') ||
-        (srcId === 'iam' && tgtId === 'apisix')
+        (srcId === 'web-client' && tgtId === 'reverse-proxy') ||
+        (srcId === 'reverse-proxy' && tgtId === 'apisix') ||
+        (srcId === 'class' && tgtId === 'db-class') ||
+        (srcId === 'curriculum' && tgtId === 'db-curriculum') ||
+        (srcId === 'agent' && (tgtId === 'redis' || tgtId === 'db-agent')) ||
+        (srcId === 'notification' && (tgtId === 'rabbitmq' || tgtId === 'db-notification')) ||
+        (srcId === 'session' && (tgtId === 'postgres' || tgtId === 'db-session')) ||
+        (srcId === 'harness' && (tgtId === 'cloudflare-r2' || tgtId === 'db-harness'))
       ) {
-        if (srcId === 'web-client') {
-          x1 = Math.round(srcRect.right - gRect.left);
-          y1 = Math.round(srcRect.top + srcRect.height / 2 - gRect.top);
-          x2 = Math.round(tgtRect.left - gRect.left);
-          y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gRect.top);
-        } else {
-          x1 = Math.round(srcRect.left - gRect.left);
-          y1 = Math.round(srcRect.top + srcRect.height / 2 - gRect.top);
-          x2 = Math.round(tgtRect.right - gRect.left);
-          y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gRect.top);
-        }
+        x1 = Math.round(s.right - gRect.left);
+        y1 = Math.round(s.top + s.height / 2 - gRect.top);
+        x2 = Math.round(t.left - gRect.left);
+        y2 = Math.round(t.top + t.height / 2 - gRect.top);
         yMid = y1;
       }
-      // 2. Same-tier routing (across Tier 2)
-      else if (Math.abs(srcRect.top - tgtRect.top) < 35) {
-        if (tgtId === 'rabbitmq' || srcId === 'rabbitmq') {
-          // Broker fan-out: channel BELOW Tier 2 with dedicated lanes
-          y1 = Math.round(srcRect.bottom - gRect.top);
-          y2 = Math.round(tgtRect.bottom - gRect.top);
-          const lane = (index % 3) * 6;
-          yMid = Math.max(y1, y2) + 10 + lane;
-        } else {
-          // Service-to-service orchestration: channel ABOVE Tier 2 with dedicated lanes
-          y1 = Math.round(srcRect.top - gRect.top);
-          y2 = Math.round(tgtRect.top - gRect.top);
-          const lane = (index % 4) * 5;
-          yMid = Math.min(y1, y2) - 10 - lane;
-        }
+      // 2. Direct Vertical Upward Pairs (APISIX -> IAM)
+      else if (srcId === 'apisix' && tgtId === 'iam') {
+        x1 = Math.round(s.left + s.width / 2 - gRect.left);
+        y1 = Math.round(s.top - gRect.top);
+        x2 = Math.round(t.left + t.width / 2 - gRect.left);
+        y2 = Math.round(t.bottom - gRect.top);
+        yMid = Math.round((y1 + y2) / 2);
       }
-      // 3. Tier 2 <-> Tier 4 (AI Services cluster, passing Tier 3)
+      // 3. Direct Vertical Downward Pairs (Session -> Harness, Decision -> LLM)
       else if (
-        (srcId === 'harness' && tgtId === 'ai-voice') ||
-        (srcId === 'laya' && tgtId === 'harness') ||
-        (srcId === 'vllm' && tgtId === 'harness')
+        (srcId === 'session' && tgtId === 'harness') ||
+        (srcId === 'laya' && tgtId === 'vllm')
       ) {
-        const isDownward = srcId === 'harness';
-        y1 = isDownward ? Math.round(srcRect.bottom - gRect.top) : Math.round(srcRect.top - gRect.top);
-        y2 = isDownward ? Math.round(tgtRect.top - gRect.top) : Math.round(tgtRect.bottom - gRect.top);
+        x1 = Math.round(s.left + s.width / 2 - gRect.left);
+        y1 = Math.round(s.bottom - gRect.top);
+        x2 = Math.round(t.left + t.width / 2 - gRect.left);
+        y2 = Math.round(t.top - gRect.top);
+        yMid = Math.round((y1 + y2) / 2);
+      }
+      // 4. Gateway Fan-Out to Microservices (Rightwards)
+      else if (srcId === 'apisix') {
+        x1 = Math.round(s.right - gRect.left);
+        y1 = Math.round(s.top + s.height / 2 - gRect.top);
+        x2 = Math.round(t.left - gRect.left);
+        y2 = Math.round(t.top + t.height / 2 - gRect.top);
+        yMid = Math.round((y1 + y2) / 2);
+      }
+      // 5. Harness down to AI Inference Cluster (STT, Decision, TTS)
+      else if (srcId === 'harness' && (tgtId === 'ai-voice' || tgtId === 'laya' || tgtId === 'tts')) {
+        let anchorRatio = 0.5;
+        if (tgtId === 'ai-voice') anchorRatio = 0.25;
+        if (tgtId === 'tts') anchorRatio = 0.75;
 
-        const tier3 = document.getElementById('tier-3');
-        const tier4 = document.getElementById('tier-4');
-        if (tier3 && tier4) {
-          const tier3Bottom = Math.round(tier3.getBoundingClientRect().bottom - gRect.top);
-          const tier4Top = Math.round(tier4.getBoundingClientRect().top - gRect.top);
-          const gutter3Mid = Math.round((tier3Bottom + tier4Top) / 2);
-          const lane = ((index % 3) - 1) * 6;
-          yMid = gutter3Mid + lane;
-        } else {
-          yMid = Math.round((y1 + y2) / 2);
-        }
+        x1 = Math.round(s.left + s.width * anchorRatio - gRect.left);
+        y1 = Math.round(s.bottom - gRect.top);
+        x2 = Math.round(t.left + t.width / 2 - gRect.left);
+        y2 = Math.round(t.top - gRect.top);
+        yMid = Math.round((y1 + y2) / 2);
       }
-      // 4. Downward routing (Tier 1 -> Tier 2, Tier 2 -> Tier 3)
-      else if (srcRect.bottom <= tgtRect.top + 20) {
-        y1 = Math.round(srcRect.bottom - gRect.top);
-        y2 = Math.round(tgtRect.top - gRect.top);
-        const baseYMid = Math.round((y1 + y2) / 2);
-        const laneOffset = ((index % 5) - 2) * 5;
-        yMid = baseYMid + laneOffset;
-      }
-      // 5. Upward routing (Tier 3 -> Tier 2, e.g. cloudflare-r2 -> harness)
+      // 6. Generic Fallback
       else {
-        y1 = Math.round(srcRect.top - gRect.top);
-        y2 = Math.round(tgtRect.bottom - gRect.top);
-        const baseYMid = Math.round((y1 + y2) / 2);
-        const laneOffset = ((index % 5) - 2) * 5;
-        yMid = baseYMid + laneOffset;
+        x1 = Math.round(s.left + s.width / 2 - gRect.left);
+        y1 = Math.round(s.top + s.height / 2 - gRect.top);
+        x2 = Math.round(t.left + t.width / 2 - gRect.left);
+        y2 = Math.round(t.top + t.height / 2 - gRect.top);
+        yMid = Math.round((y1 + y2) / 2);
       }
 
       return { x1, y1, x2, y2, yMid };
@@ -871,27 +784,10 @@
       if (!srcEl || !tgtEl) return;
 
       const gridRect = grid.getBoundingClientRect();
-      const srcRect = srcEl.getBoundingClientRect();
-      const tgtRect = tgtEl.getBoundingClientRect();
+      const coords = this.computePathCoordinates(srcId, tgtId, gridRect);
+      if (!coords) return;
 
-      let pathD = '';
-      if (srcId === tgtId) {
-        // Self-loop pulse arc above card
-        const topY = Math.round(srcRect.top - gridRect.top);
-        const midX = Math.round(srcRect.left + srcRect.width / 2 - gridRect.left);
-        pathD = `M ${midX - 25} ${topY} C ${midX - 25} ${topY - 30}, ${midX + 25} ${topY - 30}, ${midX + 25} ${topY}`;
-      } else {
-        const coords = this.computePathCoordinates(srcId, tgtId, 0, gridRect);
-        if (coords) {
-          pathD = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.yMid);
-        } else {
-          const x1 = Math.round(srcRect.left + srcRect.width / 2 - gridRect.left);
-          const y1 = Math.round(srcRect.top + srcRect.height / 2 - gridRect.top);
-          const x2 = Math.round(tgtRect.left + tgtRect.width / 2 - gridRect.left);
-          const y2 = Math.round(tgtRect.top + tgtRect.height / 2 - gridRect.top);
-          pathD = this.generateSquaredPath(x1, y1, x2, y2, Math.round((y1 + y2) / 2));
-        }
-      }
+      const pathD = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.yMid);
 
       let packetClass = 'packet-dot';
       let fillColor = '#38bdf8';
@@ -906,7 +802,6 @@
         fillColor = '#34d399';
       }
 
-      // Moving packet SVG Group (Circle + Protocol Label Pill)
       const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
       group.setAttribute('class', 'moving-packet');
       group.setAttribute('style', `color: ${fillColor}`);
@@ -924,7 +819,6 @@
       circle.setAttribute('fill', fillColor);
       group.appendChild(circle);
 
-      // Short method/protocol label pill
       let shortLabel = label;
       if (!shortLabel && this.state) {
         const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
@@ -938,23 +832,20 @@
         const textWidth = Math.max(18, Math.round(shortLabel.length * 6.2));
         const pillWidth = textWidth + 8;
 
-        const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        rect.setAttribute('x', '8');
-        rect.setAttribute('y', '-12');
-        rect.setAttribute('width', String(pillWidth));
-        rect.setAttribute('height', '15');
-        rect.setAttribute('rx', '3');
-        rect.setAttribute('fill', 'rgba(15, 23, 42, 0.92)');
-        rect.setAttribute('stroke', 'currentColor');
-        rect.setAttribute('stroke-width', '1');
-        group.appendChild(rect);
+        const pill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        pill.setAttribute('class', 'packet-label-pill');
+        pill.setAttribute('x', '8');
+        pill.setAttribute('y', '-12');
+        pill.setAttribute('width', String(pillWidth));
+        pill.setAttribute('height', '15');
+        pill.setAttribute('rx', '3');
+        pill.setAttribute('ry', '3');
+        group.appendChild(pill);
 
         const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        text.setAttribute('x', '12');
-        text.setAttribute('y', '-1');
-        text.setAttribute('font-size', '9');
-        text.setAttribute('font-family', 'monospace');
-        text.setAttribute('fill', '#e2e8f0');
+        text.setAttribute('class', 'packet-label-text');
+        text.setAttribute('x', String(8 + pillWidth / 2));
+        text.setAttribute('y', '-4.5');
         text.textContent = shortLabel;
         group.appendChild(text);
       }
@@ -1002,11 +893,10 @@
             this.state.stepIndex = sIdx;
             const step = currentCase.steps[sIdx];
 
-            // Update audio buffer / R2 state
             if (this.state.activeCaseId === 'case-2') {
               this.state.audioChunksCount = 14 + (sIdx * 2);
             } else if (this.state.activeCaseId === 'case-4') {
-              if (sIdx >= 4) {
+              if (sIdx >= 3) {
                 this.state.audioChunksCount = 0;
                 this.state.r2Uploaded = true;
               } else {
@@ -1015,39 +905,29 @@
               }
             }
 
-            // Render telemetry & highlight nodes
             this.renderCurrentState();
 
             const highlightClass = this.state.activeCaseId === 'case-3'
               ? 'node-active-purple'
               : (this.state.activeCaseId === 'case-4' ? 'node-active-amber' : 'node-active-cyan');
 
-            // Internal MVC sequence: Controller -> Model -> Controller -> View -> Controller -> Next service
             await this.animateServiceMvcCycle(step.source);
             if (!this.state.isBatchRunning) break;
 
-            // Phase 6: Controller emits packet along SVG connection path to target service
-            const shortLabel = this.getShortProtocolLabel(step);
-            this.emitPacket(step.source, step.target, highlightClass, shortLabel);
+            this.emitPacket(step.source, step.target, highlightClass, this.getShortProtocolLabel(step));
 
-            // Packet travels to target node at observable speed (1.1s transit + 100ms settling)
-            await new Promise((r) => setTimeout(r, 1200));
+            await new Promise((r) => setTimeout(r, 1150));
             if (!this.state.isBatchRunning) break;
 
             const tgtNode = document.getElementById(`node-${step.target}`);
             if (tgtNode) {
-              const tgtCtrl = tgtNode.querySelector('.mvc-subnode-controller');
-              if (tgtCtrl) {
-                tgtCtrl.style.transform = 'scale(1.25)';
-                tgtCtrl.style.boxShadow = '0 0 16px rgba(56, 189, 248, 0.9)';
-                setTimeout(() => {
-                  tgtCtrl.style.transform = '';
-                  tgtCtrl.style.boxShadow = '';
-                }, 250);
-              }
+              tgtNode.classList.add('node-active');
+              setTimeout(() => {
+                tgtNode.classList.remove('node-active');
+              }, 300);
             }
 
-            await new Promise((r) => setTimeout(r, 200));
+            await new Promise((r) => setTimeout(r, 150));
           }
 
           if (req < numRequests && this.state.isBatchRunning) {
@@ -1085,7 +965,6 @@
     updatePlayPauseIcons() {
       if (this.headless || typeof document === 'undefined') return;
 
-      // Update #btn-arch-play-scenario UI state (text and .playing class)
       const scenarioBtn = document.getElementById('btn-arch-play-scenario');
       const labelPlay = document.getElementById('label-arch-play');
       if (scenarioBtn) {
@@ -1105,19 +984,6 @@
           }
         }
       }
-
-      // Legacy buttons support
-      const playIcon = document.getElementById('icon-arch-play');
-      const pauseIcon = document.getElementById('icon-arch-pause');
-      if (playIcon && pauseIcon) {
-        if (this.state.isPlaying) {
-          playIcon.style.display = 'none';
-          pauseIcon.style.display = 'inline';
-        } else {
-          playIcon.style.display = 'inline';
-          pauseIcon.style.display = 'none';
-        }
-      }
     }
 
     renderCurrentState() {
@@ -1127,7 +993,6 @@
       const step = currentCase.steps[this.state.stepIndex];
       if (!step) return;
 
-      // 1. Update Telemetry Panel
       const caseLabel = document.getElementById('telemetry-case-label');
       const descLabel = document.getElementById('telemetry-desc-label');
       const payloadEl = document.getElementById('telemetry-payload');
@@ -1140,20 +1005,11 @@
       if (protoEl) protoEl.textContent = step.protocol;
       if (latencyEl) latencyEl.textContent = step.latency;
 
-      // 2. Update Audio Buffer & R2 Badges
-      const audioPill = document.getElementById('pill-audio-buffer');
       const audioLabel = document.getElementById('label-audio-chunks');
       const r2Badge = document.getElementById('badge-r2-status');
 
       if (audioLabel) {
         audioLabel.textContent = `Buffer: ${this.state.audioChunksCount} chunks`;
-      }
-      if (audioPill) {
-        if (this.state.audioChunksCount > 0) {
-          audioPill.classList.add('pulsing');
-        } else {
-          audioPill.classList.remove('pulsing');
-        }
       }
 
       if (r2Badge) {
@@ -1166,7 +1022,6 @@
         }
       }
 
-      // 3. Highlight Nodes
       document.querySelectorAll('.service-node').forEach((node) => {
         node.classList.remove('node-active-amber', 'node-active-emerald', 'node-active-purple', 'node-active-cyan', 'node-active-blue');
       });
@@ -1181,29 +1036,7 @@
       if (srcNode) srcNode.classList.add(highlightClass);
       if (tgtNode) tgtNode.classList.add(highlightClass);
 
-      // 4. Highlight Connection Path
       this.highlightPath(step.source, step.target, highlightClass);
-
-      // 5. Trigger subtle pulse animations mediating through the controller
-      this.executeStep(step);
-    }
-
-    executeStep(step) {
-      if (this.headless || typeof document === 'undefined') return;
-      if (!step) {
-        const currentCase = this.scenarios.find((s) => s.id === this.state.activeCaseId) || this.scenarios[0];
-        step = currentCase.steps[this.state.stepIndex];
-      }
-      if (!step) return;
-
-      const highlightClass = this.state.activeCaseId === 'case-3'
-        ? 'node-active-purple'
-        : (this.state.activeCaseId === 'case-4' ? 'node-active-amber' : 'node-active-cyan');
-
-      const label = this.getShortProtocolLabel(step);
-      this.animateServiceMvcCycle(step.source, () => {
-        this.emitPacket(step.source, step.target, highlightClass, label);
-      });
     }
 
     drawConnectionPaths() {
@@ -1216,42 +1049,8 @@
       svgGroup.innerHTML = '';
       const gridRect = grid.getBoundingClientRect();
 
-      // Connections topology map
-      const connections = [
-        // Ingress Tier 1 -> Tier 1 & Tier 2
-        ['web-client', 'apisix'],
-        ['iam', 'apisix'],
-        ['apisix', 'harness'],
-        ['web-client', 'harness'],
-
-        // Tier 2 Services to Storage Tier 3 (Postgres & Redis)
-        ['harness', 'redis'],
-        ['harness', 'postgres'],
-        ['session', 'postgres'],
-        ['class', 'postgres'],
-        ['curriculum', 'postgres'],
-        ['agent', 'redis'],
-        ['notification', 'postgres'],
-
-        // Tier 2 Services to Message Broker (RabbitMQ)
-        ['session', 'rabbitmq'],
-        ['class', 'rabbitmq'],
-        ['notification', 'rabbitmq'],
-
-        // Tier 2 Internal orchestration
-        ['harness', 'curriculum'],
-        ['harness', 'session'],
-        ['harness', 'agent'],
-
-        // External Storage & AI Servers to Harness
-        ['harness', 'ai-voice'],
-        ['cloudflare-r2', 'harness'],
-        ['laya', 'harness'],
-        ['vllm', 'harness']
-      ];
-
-      connections.forEach(([srcId, tgtId], index) => {
-        const coords = this.computePathCoordinates(srcId, tgtId, index, gridRect);
+      this.connections.forEach(([srcId, tgtId]) => {
+        const coords = this.computePathCoordinates(srcId, tgtId, gridRect);
         if (!coords) return;
 
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -1263,6 +1062,7 @@
         const d = this.generateSquaredPath(coords.x1, coords.y1, coords.x2, coords.y2, coords.yMid);
         path.setAttribute('d', d);
         path.setAttribute('marker-end', 'url(#arrow-default)');
+
         svgGroup.appendChild(path);
       });
     }
@@ -1305,9 +1105,7 @@
       if (typeof lucide !== 'undefined' && typeof lucide.createIcons === 'function') {
         try {
           lucide.createIcons();
-        } catch (e) {
-          // Safe fallback
-        }
+        } catch (e) {}
       }
       this.resize();
       this.play();
@@ -1353,7 +1151,7 @@
     }
   }
 
-  // Self-register with DiagramRegistry if present
+  // Self-register with DiagramRegistry
   if (typeof DiagramRegistry !== 'undefined' && DiagramRegistry && typeof DiagramRegistry.register === 'function') {
     DiagramRegistry.register({
       id: 'full-architecture',
@@ -1361,34 +1159,27 @@
       label: '3. ESPP Full Microservices Architecture & Cloud Storage',
       defaultSelected: false,
       mount: (container) => {
-        if (FullArchTemplate && typeof FullArchTemplate.mount === 'function') {
+        if (typeof FullArchTemplate !== 'undefined' && FullArchTemplate && typeof FullArchTemplate.mount === 'function') {
           FullArchTemplate.mount(container);
         }
       },
       init: () => {
-        if (typeof window !== 'undefined') {
-          window.fullArchSim = new FullArchitectureSimulation().init();
-          return window.fullArchSim;
+        const instance = new FullArchitectureSimulation();
+        return instance.init();
+      },
+      activate: (instance) => {
+        if (instance && typeof instance.activate === 'function') {
+          instance.activate();
         }
       },
-      activate: () => {
-        if (typeof window !== 'undefined' && window.fullArchSim) {
-          window.fullArchSim.activate();
+      deactivate: (instance) => {
+        if (instance && typeof instance.deactivate === 'function') {
+          instance.deactivate();
         }
       },
-      deactivate: () => {
-        if (typeof window !== 'undefined' && window.fullArchSim) {
-          window.fullArchSim.deactivate();
-        }
-      },
-      resize: () => {
-        if (typeof window !== 'undefined' && window.fullArchSim) {
-          window.fullArchSim.resize();
-        }
-      },
-      handleUrlParams: (params) => {
-        if (typeof window !== 'undefined' && window.fullArchSim) {
-          window.fullArchSim.handleUrlParams(params);
+      resize: (instance) => {
+        if (instance && typeof instance.resize === 'function') {
+          instance.resize();
         }
       }
     });
@@ -1396,6 +1187,6 @@
 
   return {
     FullArchitectureSimulation: FullArchitectureSimulation,
-    SCENARIOS: SCENARIOS
+    default: FullArchitectureSimulation
   };
 });

@@ -136,7 +136,7 @@ test('FullArchitectureSimulation exports class and orchestrates 5 scenarios', as
 
   // Verify Case 4 (Audio Buffer & R2) targets Redis and Cloudflare R2
   const case4 = sim.scenarios[3];
-  const r2Step = case4.steps.find((s) => s.target === 'cloudflare-r2');
+  const r2Step = case4.steps.find((s) => s.target === 'cloudflare-r2' && s.protocol === 'S3/R2');
   assert.ok(r2Step, 'Case 4 must upload to Cloudflare R2');
   assert.equal(r2Step.protocol, 'S3/R2');
   assert.ok(r2Step.payload.includes('conversation.m4a'));
@@ -235,22 +235,26 @@ test('FullArchitectureSimulation registers all database and service connection p
   const sim = new Cls({ headless: true });
 
   const requiredPathIds = [
-    'path-web-client-apisix',
-    'path-apisix-harness',
-    'path-harness-postgres',
-    'path-harness-redis',
-    'path-session-postgres',
-    'path-session-rabbitmq',
-    'path-class-postgres',
-    'path-class-rabbitmq',
-    'path-curriculum-postgres',
+    'path-web-client-reverse-proxy',
+    'path-reverse-proxy-apisix',
+    'path-apisix-iam',
+    'path-apisix-class',
+    'path-apisix-curriculum',
+    'path-apisix-agent',
+    'path-apisix-notification',
+    'path-apisix-session',
+    'path-class-db-class',
+    'path-curriculum-db-curriculum',
     'path-agent-redis',
-    'path-notification-postgres',
     'path-notification-rabbitmq',
-    'path-iam-apisix',
-    'path-cloudflare-r2-harness',
-    'path-laya-harness',
-    'path-vllm-harness'
+    'path-session-postgres',
+    'path-apisix-harness',
+    'path-session-harness',
+    'path-harness-cloudflare-r2',
+    'path-harness-ai-voice',
+    'path-harness-laya',
+    'path-laya-vllm',
+    'path-harness-tts'
   ];
 
   requiredPathIds.forEach((id) => {
